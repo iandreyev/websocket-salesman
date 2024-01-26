@@ -1,0 +1,24 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html lang="ru">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Пример работы WebSocket</title>
+</head>
+<body>
+<script>
+	
+	let params = {userID: Math.random(),channelID:"localChat"};
+    let ws = new WebSocket('ws://127.0.0.1:8090?userID='+ params.userID + '&channelID='+ params.channelID);
+
+    ws.addEventListener('message', (event) => {
+        console.info('Frontend got message: ' + event.data); // get from server
+    })
+
+    const func = () => {
+        ws.send('Hello Martians!'); //send on server
+    };
+    setTimeout(func, 2 * 1000);
+	
+</script>
+</body>
+</html>
