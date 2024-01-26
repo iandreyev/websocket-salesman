@@ -1,3 +1,23 @@
+<?php
+/* ============================ */
+/*         SalesMan CRM         */
+/* ============================ */
+/* (C) 2024 Vladislav Andreev   */
+/*       SalesMan Project       */
+/*        www.isaler.ru         */
+/* ============================ */
+
+use Salesman\WebSocket;
+
+$rootpath = dirname(__DIR__);
+
+require_once $rootpath.'/php/class/WebSocket.php';
+require_once $rootpath.'/vendor/autoload.php';
+
+$websocket = new WebSocket(25);
+$config = $websocket ->settings;
+$server = $config['protocol']."://".$config['host'].":".$config['port']."/server/?userID=".$config['userID']."&channelID=".$config['chatID'];
+?>
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <html lang="ru">
 <head>
@@ -5,10 +25,9 @@
 	<title>Пример работы WebSocket</title>
 </head>
 <body>
-<script>
+<script type="text/javascript">
 	
-	let params = {userID: "25", channelID: "localChat"};
-	let ws = new WebSocket('ws://127.0.0.1:8099/server.php?userID=' + params.userID + '&channelID=' + params.channelID);
+	let ws = new WebSocket('<?=$server?>');
 	
 	ws.addEventListener('message', (event) => {
 		console.info('Frontend got message: ' + event.data); // get from server

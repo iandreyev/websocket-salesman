@@ -1,6 +1,29 @@
 {
+    "name": "salesman/websocket",
+    "description": "Реализация собственного ws-сервера + примеры использования. Не подходит для чатов. Разрабатывается под нужды SalesMan CRM (https://salesman.pro)",
+    "type": "project",
+    "keywords": ["ws","websocket"],
+    "homepage": "https://salesman.pro",
+    "license": "Apache-2.0",
+    "authors": [
+        {
+            "name": "Vladislav Andreev",
+            "email": "v@salesman.pro",
+            "role": "Author, Developer, Designer"
+        }
+    ],
+    "support": {
+        "email": "support@salesman.pro"
+    },
+    "autoload": {
+        "psr-4": {
+            "Salesman\\": "/php/"
+        }
+    },
     "require": {
         "workerman/workerman": "^4.0",
-        "ext-json": "*"
+        "ext-json": "*",
+        "ext-curl": "*",
+        "ext-yaml": "*"
     }
 }

@@ -1,25 +1,39 @@
 <?php
+/* ============================ */
+/*         SalesMan CRM         */
+/* ============================ */
+/* (C) 2024 Vladislav Andreev   */
+/*       SalesMan Project       */
+/*        www.isaler.ru         */
+/* ============================ */
+
 error_reporting(E_ERROR);
 
+use Salesman\WebSocket;
 use Workerman\Lib\Timer;
 use Workerman\Worker;
 
-require_once dirname(__DIR__).'/vendor/autoload.php';
+$rootpath = dirname(__DIR__);
+
+//require_once $rootpath.'/php/class/WebSocket.php';
+require_once $rootpath.'/vendor/autoload.php';
+
+// загружаем конфиг
+$websocket = new WebSocket(25);
+$config = $websocket ->settings;
 
 // сюда будем складывать все подключения
 $connections = [];
 
-// SSL context.
-$context = [
-	'ssl' => [
-		'local_cert'  => '/your/path/of/server.pem',
-		'local_pk'    => '/your/path/of/server.key',
-		'verify_peer' => false,
-	]
-];
+// SSL context, если настроен
+$context = [];
+
+if(!empty($config['context'])) {
+	$context = $config['context'];
+}
 
 // Create a Websocket server
-$worker = new Worker('websocket://127.0.0.1:8099');
+$worker = new Worker("websocket://".$config['host'].":".$config['port'], $context);
 
 // 4 processes
 $worker -> count = 4;
@@ -82,22 +96,12 @@ $worker -> onConnect = static function ($connection) {
 		// формируем список подключений с разбивкой по channelID
 		$connections[$connection -> channelID][$connection -> userID] = $connection;
 
-		// Собираем список всех пользователей
-		// todo: не используется
-		/*$users = [];
-		foreach ($connections[$connection -> channelID] as $c) {
-			$users[$c -> channelID][] = $c -> userID;
-		}
-
-		// Отправляем пользователю данные авторизации
 		$messageData = [
-			'action'      => 'Authorized',
-			'userID'      => $connection -> userID,
-			'channelID'   => $connection -> channelID,
-			'users'       => $users,
-			"connections" => $connections
+			'action'    => 'Authorized',
+			'userID'    => $connection -> userID,
+			'channelID'  => $connection -> channelID,
 		];
-		$connection -> send(json_encode($messageData, JSON_THROW_ON_ERROR));*/
+		$connection -> send(json_encode($messageData));
 
 	};
 

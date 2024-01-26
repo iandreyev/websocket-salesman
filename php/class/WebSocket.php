@@ -9,8 +9,6 @@
 
 namespace Salesman;
 
-use Exception;
-
 /**
  * Class Comet
  *
@@ -23,7 +21,7 @@ class WebSocket {
 	 *
 	 * @var mixed
 	 */
-	public $db, $identity, $iduser, $userName;
+	public $iduser, $userChat;
 
 	public $settings;
 
@@ -31,23 +29,29 @@ class WebSocket {
 
 		$rootpath = dirname(__DIR__, 2);
 
-		require_once $rootpath."/vendor/autoload.php";
+		// загружаем конфиг
+		$config = yaml_parse_file($rootpath.'/cached/settings.yaml');
 
-		$this -> identity = $GLOBALS['identity'];
-		$this -> db       = $GLOBALS['db'];
-		$this -> iduser   = $iduser;
+		$set = $config['config'];
 
-		$set = json_decode(file_get_contents($rootpath."/cash/comet.config.json"), true);
+		$set['protocol'] = !empty($config['ssl']['local_cert']) && !empty($config['ssl']['local_pk']) ? "wss" : "ws";
 
-		$set['server'] = $set['host'].":".$set['port'];
+		if(!empty($config['ssl']['local_cert']) && !empty($config['ssl']['local_pk'])) {
+
+			$set['context'] = [
+				"ssl" => $config['ssl']
+			];
+
+		}
 
 		// настройки для подключения пользователя
 		// и дальнейшей его авторизации через WS
 		// обычно не нужны
 		if ($this -> iduser > 0) {
 
-			$set['user_id']  = $this -> userUID($this -> iduser);
-			$set['user_key'] = md5($this -> identity.$this -> iduser.$this -> userName);
+			$set['userID']  = $this -> userUID($this -> iduser);
+			$set['chatID']  = $config['chat']['chatID'];
+			$set['userKEY'] = md5($this -> iduser.$this -> userChat);
 
 		}
 
@@ -79,8 +83,8 @@ class WebSocket {
 			"accept" => "application/json",
 		];
 		$params = [
-			"user_id" => $this -> userUID($iduser),
-			"chat_id" => $chatid,
+			"userID"  => $this -> userUID($iduser),
+			"chatID"  => $chatid,
 			"message" => $text
 		];
 
@@ -91,28 +95,6 @@ class WebSocket {
 			"code"   => $req -> info['http_code'],
 			"data"   => json_decode($req -> response, true),
 			//"info" => $req -> info,
-			"error"  => $req -> error,
-			"params" => $params
-		];
-
-	}
-
-	/**
-	 * Метод для получения списка пользователей по чатам (http/https)
-	 * @return array
-	 */
-	public function getChats(): array {
-
-		$header = [
-			"accept" => "application/json",
-		];
-		$params = [];
-
-		$req = SendRequestCurl("https://".$this -> settings['server']."/chats", $params, $header, 'form', 'GET');
-
-		return [
-			"code"   => $req -> info['http_code'],
-			"data"   => json_decode($req -> response, true),
 			"error"  => $req -> error,
 			"params" => $params
 		];
@@ -174,10 +156,7 @@ class WebSocket {
 	 */
 	public function chatID() {
 
-		return str_replace([
-			".",
-			"-"
-		], "", $_SERVER["SERVER_NAME"]);
+		return $this -> settings['chat']['chatID'];
 
 	}
 
