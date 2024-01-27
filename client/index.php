@@ -12,11 +12,13 @@ use Salesman\WebSocket;
 $rootpath = dirname(__DIR__);
 
 require_once $rootpath.'/php/class/WebSocket.php';
+require_once $rootpath.'/php/functions.php';
 require_once $rootpath.'/vendor/autoload.php';
 
 $websocket = new WebSocket(25);
 $config = $websocket ->settings;
-$server = $config['protocol']."://".$config['host'].":".$config['port']."/server/?userID=".$config['userID']."&channelID=".$config['chatID'];
+
+$server = $config['protocol']."://".$config['host'].":".$config['port']."/server/index.php?userID=".$config['userID']."&channelID=".$config['chatID'];
 ?>
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <html lang="ru">
@@ -25,13 +27,13 @@ $server = $config['protocol']."://".$config['host'].":".$config['port']."/server
 	<title>Пример работы WebSocket</title>
 </head>
 <body>
-<script type="text/javascript">
+<script>
 	
 	let ws = new WebSocket('<?=$server?>');
 	
-	ws.addEventListener('message', (event) => {
+	/*ws.addEventListener('message', (event) => {
 		console.info('Frontend got message: ' + event.data); // get from server
-	})
+	})*/
 	
 	ws.onopen = function () {
 		console.log("Connected");
@@ -50,7 +52,6 @@ $server = $config['protocol']."://".$config['host'].":".$config['port']."/server
 	
 	ws.onmessage = function (event) {
 		console.log("Получены данные " + event.data);
-		ws.close();
 	};
 	
 	ws.onerror = function (error) {

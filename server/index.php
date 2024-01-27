@@ -15,11 +15,11 @@ use Workerman\Worker;
 
 $rootpath = dirname(__DIR__);
 
-//require_once $rootpath.'/php/class/WebSocket.php';
+require_once $rootpath.'/php/class/WebSocket.php';
 require_once $rootpath.'/vendor/autoload.php';
 
 // загружаем конфиг
-$websocket = new WebSocket(25);
+$websocket = new WebSocket();
 $config = $websocket ->settings;
 
 // сюда будем складывать все подключения
@@ -34,9 +34,10 @@ if(!empty($config['context'])) {
 
 // Create a Websocket server
 $worker = new Worker("websocket://".$config['host'].":".$config['port'], $context);
+//$worker = new Worker("websocket://127.0.0.1:8099");
 
 // 4 processes
-$worker -> count = 4;
+$worker -> count = 10;
 
 $worker -> onWorkerStart = static function ($worker) use (&$connections) {
 
@@ -81,7 +82,7 @@ $worker -> onWorkerStart = static function ($worker) use (&$connections) {
 $worker -> onConnect = static function ($connection) {
 
 	// $connection -> send('This message was sent from Backend(index.php), when server was started.');
-	echo "New connection\n";
+	// echo "New connection\n";
 
 	// Эта функция выполняется при подключении пользователя к WebSocket-серверу
 	$connection -> onWebSocketConnect = static function ($connection) use (&$connections) {
@@ -89,6 +90,10 @@ $worker -> onConnect = static function ($connection) {
 		// Добавляем соединение в список
 		$connection -> userID    = $_GET['userID'];
 		$connection -> channelID = $_GET['channelID'];
+
+        echo "New WebSocket connection\n";
+        echo json_encode($connection)."\n";
+        echo json_encode($_GET)."\n";
 
 		// счетчик безответных пингов
 		$connection -> pingWithoutResponseCount = 0;
@@ -126,7 +131,7 @@ $worker -> onMessage = static function ($connection, $message) use (&$connection
 		else {
 
 			printf("Channel: %s, UserID: %s\n", $connection -> channelID, $connection -> userID);
-			echo "Message: $message\n\n";
+			echo "Message: $message\n";
 
 			// Дополняем сообщение данными об отправителе
 			$messageData['userID']    = $connection -> userID;

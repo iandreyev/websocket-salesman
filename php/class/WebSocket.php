@@ -32,6 +32,10 @@ class WebSocket {
 		// загружаем конфиг
 		$config = yaml_parse_file($rootpath.'/cached/settings.yaml');
 
+        if($iduser > 0) {
+            $this->iduser = $iduser;
+        }
+
 		$set = $config['config'];
 
 		$set['protocol'] = !empty($config['ssl']['local_cert']) && !empty($config['ssl']['local_pk']) ? "wss" : "ws";
@@ -88,7 +92,7 @@ class WebSocket {
 			"message" => $text
 		];
 
-		$req = SendRequestCurl("https://".$this -> settings['server']."/message", $params, $header);
+		$req = SendRequestCurl("ws://".$this -> settings['server']."/server/index.php", $params, $header);
 
 		return [
 			"url"    => "https://".$this -> settings['server']."/message",
@@ -108,7 +112,7 @@ class WebSocket {
 	 */
 	public function userUID($iduser): int {
 
-		$name    = str_split($_SERVER["HTTP_HOST"]);
+		$name    = str_split($this ->userChat);
 		$alfabet = array_flip([
 			'a',
 			'b',
