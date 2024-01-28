@@ -1,6 +1,7 @@
 config:
   host: 127.0.0.1
-  port: 8099
+  wsport: 8099
+  httpport: 80
   ssl:
     local_cert:
     local_pk:

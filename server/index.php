@@ -20,7 +20,7 @@ require_once $rootpath.'/vendor/autoload.php';
 
 // загружаем конфиг
 $websocket = new WebSocket();
-$config = $websocket ->settings;
+$config    = $websocket -> settings;
 
 // сюда будем складывать все подключения
 $connections = [];
@@ -28,18 +28,20 @@ $connections = [];
 // SSL context, если настроен
 $context = [];
 
-if(!empty($config['context'])) {
+if (!empty($config['context'])) {
 	$context = $config['context'];
 }
 
 // Create a Websocket server
-$worker = new Worker("websocket://".$config['host'].":".$config['port'], $context);
+$worker = new Worker("websocket://".$config['host'].":".$config['wsport'], $context);
 //$worker = new Worker("websocket://127.0.0.1:8099");
 
-// 4 processes
+$worker -> name  = 'pusher';
 $worker -> count = 10;
 
 $worker -> onWorkerStart = static function ($worker) use (&$connections) {
+
+	global $config;
 
 	// пингуем каждые 5 секунд
 	$interval = 5;
@@ -76,6 +78,10 @@ $worker -> onWorkerStart = static function ($worker) use (&$connections) {
 
 	});
 
+	$httpurl      = $config['protocol']."://".$config['server'].":".$config['httpport'];
+
+
+
 };
 
 // Обработка нового подключения
@@ -91,9 +97,9 @@ $worker -> onConnect = static function ($connection) {
 		$connection -> userID    = $_GET['userID'];
 		$connection -> channelID = $_GET['channelID'];
 
-        echo "New WebSocket connection\n";
-        echo json_encode($connection)."\n";
-        echo json_encode($_GET)."\n";
+		echo "New WebSocket connection\n";
+		echo json_encode($connection)."\n";
+		echo json_encode($_GET)."\n";
 
 		// счетчик безответных пингов
 		$connection -> pingWithoutResponseCount = 0;
@@ -104,7 +110,7 @@ $worker -> onConnect = static function ($connection) {
 		$messageData = [
 			'action'    => 'Authorized',
 			'userID'    => $connection -> userID,
-			'channelID'  => $connection -> channelID,
+			'channelID' => $connection -> channelID,
 		];
 		$connection -> send(json_encode($messageData));
 
@@ -114,7 +120,7 @@ $worker -> onConnect = static function ($connection) {
 
 $worker -> onMessage = static function ($connection, $message) use (&$connections) {
 
-	if( !empty($message) ) {
+	if (!empty($message)) {
 
 		$messageData = json_decode($message, true);
 		$toUserId    = isset($messageData['toID']) ? (int)$messageData['toID'] : 0;
@@ -126,8 +132,7 @@ $worker -> onMessage = static function ($connection, $message) use (&$connection
 			// При получении сообщения "Pong", обнуляем счетчик пингов
 			$connection -> pingWithoutResponseCount = 0;
 
-		}
-		// обычные сообщения
+		} // обычные сообщения
 		else {
 
 			printf("Channel: %s, UserID: %s\n", $connection -> channelID, $connection -> userID);
@@ -157,8 +162,7 @@ $worker -> onMessage = static function ($connection, $message) use (&$connection
 					// Отправляем приватное сообщение указанному пользователю
 					$connections[$connection -> channelID][$toUserId] -> send(json_encode($messageData, JSON_THROW_ON_ERROR));
 
-				}
-				// если не существует, то отправляем ошибку отправителю
+				} // если не существует, то отправляем ошибку отправителю
 				else {
 
 					// и отправителю

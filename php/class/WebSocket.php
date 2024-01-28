@@ -32,15 +32,15 @@ class WebSocket {
 		// загружаем конфиг
 		$config = yaml_parse_file($rootpath.'/cached/settings.yaml');
 
-        if($iduser > 0) {
-            $this->iduser = $iduser;
-        }
+		if ($iduser > 0) {
+			$this -> iduser = $iduser;
+		}
 
 		$set = $config['config'];
 
 		$set['protocol'] = !empty($config['ssl']['local_cert']) && !empty($config['ssl']['local_pk']) ? "wss" : "ws";
 
-		if(!empty($config['ssl']['local_cert']) && !empty($config['ssl']['local_pk'])) {
+		if (!empty($config['ssl']['local_cert']) && !empty($config['ssl']['local_pk'])) {
 
 			$set['context'] = [
 				"ssl" => $config['ssl']
@@ -92,10 +92,13 @@ class WebSocket {
 			"message" => $text
 		];
 
-		$req = SendRequestCurl("ws://".$this -> settings['server']."/server/index.php", $params, $header);
+		$protocol = $this -> settings['protocol'] === 'wss' ? 'https' : 'http';
+		$url      = $protocol."://".$this -> settings['server'].":".$this -> settings['httpport'];
+
+		$req = SendRequestCurl($url, $params, $header);
 
 		return [
-			"url"    => "https://".$this -> settings['server']."/message",
+			"url"    => $url,
 			"code"   => $req -> info['http_code'],
 			"data"   => json_decode($req -> response, true),
 			//"info" => $req -> info,
@@ -112,7 +115,7 @@ class WebSocket {
 	 */
 	public function userUID($iduser): int {
 
-		$name    = str_split($this ->userChat);
+		$name    = str_split($this -> userChat);
 		$alfabet = array_flip([
 			'a',
 			'b',
@@ -146,7 +149,7 @@ class WebSocket {
 
 		foreach ($name as $a) {
 
-			$uid .= $alfabet[ $a ];
+			$uid .= $alfabet[$a];
 
 		}
 

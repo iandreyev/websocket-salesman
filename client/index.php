@@ -5,6 +5,7 @@
 /* (C) 2024 Vladislav Andreev   */
 /*       SalesMan Project       */
 /*        www.isaler.ru         */
+
 /* ============================ */
 
 use Salesman\WebSocket;
@@ -16,9 +17,9 @@ require_once $rootpath.'/php/functions.php';
 require_once $rootpath.'/vendor/autoload.php';
 
 $websocket = new WebSocket(25);
-$config = $websocket ->settings;
+$config    = $websocket -> settings;
 
-$server = $config['protocol']."://".$config['host'].":".$config['port']."/server/index.php?userID=".$config['userID']."&channelID=".$config['chatID'];
+$server = $config['protocol']."://".$config['host'].":".$config['wsport']."/server/?userID=".$config['userID']."&channelID=".$config['chatID'];
 ?>
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <html lang="ru">
