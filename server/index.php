@@ -1,3 +1,4 @@
+# /opt/php74/bin/php
 <?php
 /* ============================ */
 /*         SalesMan CRM         */
@@ -15,7 +16,7 @@ use Workerman\Worker;
 
 $rootpath = dirname(__DIR__);
 
-require_once $rootpath.'/php/class/WebSocket.php';
+//require_once $rootpath.'/php/class/WebSocket.php';
 require_once $rootpath.'/vendor/autoload.php';
 
 // загружаем конфиг
@@ -32,16 +33,33 @@ if (!empty($config['context'])) {
 	$context = $config['context'];
 }
 
+// адрес http сервера
+$protocol = $config['protocol'] === 'wss' ? 'https' : 'http';
+$httpurl  = $protocol."://".$config['host'].":".$config['httpport'];
+
+// Channel server.
+$channel_server = new Channel\Server('0.0.0.0');
+
 // Create a Websocket server
-$worker = new Worker("websocket://".$config['host'].":".$config['wsport'], $context);
-//$worker = new Worker("websocket://127.0.0.1:8099");
+$ws_worker = new Worker("websocket://".$config['host'].":".$config['wsport'], $context);
+$ws_worker -> name  = 'pusher';
+$ws_worker -> count = 4;
 
-$worker -> name  = 'pusher';
-$worker -> count = 10;
+$ws_worker -> onWorkerStart = static function ($ws_worker) use (&$connections, $httpurl, $config) {
 
-$worker -> onWorkerStart = static function ($worker) use (&$connections) {
+	$http_worker              = new Worker($httpurl);
+	$http_worker -> name      = 'publisher';
+	$http_worker -> onWorkerStart = static function () use (&$connections, $httpurl, $config) {
+		echo "New http worker\n";
+		echo json_encode($config)."\n";
+	};
+	$http_worker -> onMessage = static function ($connection, $data) use (&$connections) {
 
-	global $config;
+		$data = json_decode($data);
+		echo json_encode($data)."\n";
+
+	};
+	$http_worker -> listen();
 
 	// пингуем каждые 5 секунд
 	$interval = 5;
@@ -65,7 +83,7 @@ $worker -> onWorkerStart = static function ($worker) use (&$connections) {
 				}
 				else {
 
-					$c -> send(json_encode(["action" => "Ping"], JSON_THROW_ON_ERROR));
+					$c -> send(json_encode(["action" => "Ping"]));
 
 					// увеличиваем счетчик пингов
 					$c -> pingWithoutResponseCount++;
@@ -78,14 +96,10 @@ $worker -> onWorkerStart = static function ($worker) use (&$connections) {
 
 	});
 
-	$httpurl      = $config['protocol']."://".$config['server'].":".$config['httpport'];
-
-
-
 };
 
 // Обработка нового подключения
-$worker -> onConnect = static function ($connection) {
+$ws_worker -> onConnect = static function ($connection) {
 
 	// $connection -> send('This message was sent from Backend(index.php), when server was started.');
 	// echo "New connection\n";
@@ -98,7 +112,7 @@ $worker -> onConnect = static function ($connection) {
 		$connection -> channelID = $_GET['channelID'];
 
 		echo "New WebSocket connection\n";
-		echo json_encode($connection)."\n";
+		//echo json_encode($connection)."\n";
 		echo json_encode($_GET)."\n";
 
 		// счетчик безответных пингов
@@ -118,7 +132,10 @@ $worker -> onConnect = static function ($connection) {
 
 };
 
-$worker -> onMessage = static function ($connection, $message) use (&$connections) {
+$ws_worker -> onMessage = static function ($connection, $message) use (&$connections) {
+
+	// Publish broadcast event to all worker processes.
+	Channel\Client::publish('broadcast', $message);
 
 	if (!empty($message)) {
 
@@ -177,17 +194,17 @@ $worker -> onMessage = static function ($connection, $message) use (&$connection
 		}
 
 	}
-	/*else{
+	else {
 
 		// При получении сообщения "Pong", обнуляем счетчик пингов
 		$connection -> pingWithoutResponseCount = 0;
 
-	}*/
+	}
 
 };
 
 // Emitted when connection closed
-$worker -> onClose = static function ($connection) {
+$ws_worker -> onClose = static function ($connection) {
 
 	echo "Connection closed\n";
 	echo json_encode($connection)."\n";

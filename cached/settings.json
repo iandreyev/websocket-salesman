@@ -1,0 +1,15 @@
+{
+	"config": {
+		"host": "127.0.0.1",
+		"wsport": 8099,
+		"httpport": 8089,
+		"ssl": {
+			"local_cert": null,
+			"local_pk": null,
+			"verify_peer": false
+		}
+	},
+	"chat": {
+		"chatID": "localChat"
+	}
+}
