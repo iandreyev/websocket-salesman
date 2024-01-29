@@ -43,7 +43,7 @@ $channel_server = new Channel\Server('0.0.0.0');
 // Create a Websocket server
 $ws_worker = new Worker("websocket://".$config['host'].":".$config['wsport'], $context);
 $ws_worker -> name  = 'pusher';
-$ws_worker -> count = 4;
+$ws_worker -> count = 1;
 
 $ws_worker -> onWorkerStart = static function ($ws_worker) use (&$connections, $httpurl, $config) {
 

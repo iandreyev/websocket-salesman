@@ -1,6 +1,6 @@
 {
 	"config": {
-		"host": "next.isaler.ru",
+		"host": "127.0.0.1",
 		"wsport": 8099,
 		"httpport": 8089,
 		"ssl": {
