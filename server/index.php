@@ -38,28 +38,46 @@ $protocol = $config['protocol'] === 'wss' ? 'https' : 'http';
 $httpurl  = $protocol."://".$config['host'].":".$config['httpport'];
 
 // Channel server.
-$channel_server = new Channel\Server('0.0.0.0');
+$channel_server = new Channel\Server();
 
 // Create a Websocket server
-$ws_worker = new Worker("websocket://".$config['host'].":".$config['wsport'], $context);
+$ws_worker          = new Worker("websocket://".$config['host'].":".$config['wsport'], $context);
 $ws_worker -> name  = 'pusher';
 $ws_worker -> count = 1;
 
 $ws_worker -> onWorkerStart = static function ($ws_worker) use (&$connections, $httpurl, $config) {
 
-	$http_worker              = new Worker($httpurl);
-	$http_worker -> name      = 'publisher';
+	/*
+	$http_worker                  = new Worker($httpurl);
+	$http_worker -> name          = 'publisher';
 	$http_worker -> onWorkerStart = static function () use (&$connections, $httpurl, $config) {
 		echo "New http worker\n";
 		echo json_encode($config)."\n";
 	};
-	$http_worker -> onMessage = static function ($connection, $data) use (&$connections) {
+	$http_worker -> onMessage     = static function ($connection, $data) use (&$connections) {
 
 		$data = json_decode($data);
 		echo json_encode($data)."\n";
 
 	};
 	$http_worker -> listen();
+	*/
+
+	// Channel client.
+	Channel\Client ::connect();
+
+	$event_name = $ws_worker -> id;
+
+	Channel\Client ::on($event_name, static function ($event_data) use ($ws_worker) {
+		$to_connection_id = $event_data['to_connection_id'];
+		$message          = $event_data['content'];
+		if (!isset($ws_worker -> connections[$to_connection_id])) {
+			echo "connection not exists\n";
+			return;
+		}
+		$to_connection = $ws_worker -> connections[$to_connection_id];
+		$to_connection -> send($message);
+	});
 
 	// пингуем каждые 5 секунд
 	$interval = 5;
@@ -135,7 +153,7 @@ $ws_worker -> onConnect = static function ($connection) {
 $ws_worker -> onMessage = static function ($connection, $message) use (&$connections) {
 
 	// Publish broadcast event to all worker processes.
-	Channel\Client::publish('broadcast', $message);
+	// Channel\Client ::publish('broadcast', $message);
 
 	if (!empty($message)) {
 
@@ -149,7 +167,8 @@ $ws_worker -> onMessage = static function ($connection, $message) use (&$connect
 			// При получении сообщения "Pong", обнуляем счетчик пингов
 			$connection -> pingWithoutResponseCount = 0;
 
-		} // обычные сообщения
+		}
+		// обычные сообщения
 		else {
 
 			printf("Channel: %s, UserID: %s\n", $connection -> channelID, $connection -> userID);
@@ -228,6 +247,41 @@ $ws_worker -> onClose = static function ($connection) {
 	foreach ($connections[$connection -> channelID] as $c) {
 		$c -> send($message);
 	}
+
+};
+
+// Http server.
+$http_worker                  = new Worker($httpurl);
+$http_worker -> name          = 'publisher';
+$http_worker -> onWorkerStart = static function () {
+	Channel\Client ::connect();
+};
+$http_worker -> onMessage     = static function ($connection, $data) {
+
+	$data = json_decode($data);
+	echo json_encode($data)."\n";
+	echo json_encode($_GET)."\n";
+
+	$connection -> send('ok');
+
+	/*
+	if (isset($_GET['to_worker_id']) && isset($_GET['to_connection_id'])) {
+		$event_name       = $_GET['to_worker_id'];
+		$to_connection_id = $_GET['to_connection_id'];
+		$content          = $_GET['content'];
+		Channel\Client ::publish($event_name, [
+			'to_connection_id' => $to_connection_id,
+			'content'          => $content
+		]);
+	}
+	else {
+		$event_name = 'broadcast';
+		$content    = $_GET['content'];
+		Channel\Client ::publish($event_name, [
+			'content' => $content
+		]);
+	}
+	*/
 
 };
 
