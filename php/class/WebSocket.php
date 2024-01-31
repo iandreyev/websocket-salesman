@@ -82,7 +82,50 @@ class WebSocket {
 	 * @param string|array $text
 	 * @return array
 	 */
-	public function sendMessage(int $iduser = 0, string $chatid = '', $text = ''): array {
+	public function sendMessage(int $iduser = 0, string $chatid = '', $text = NULL): array {
+
+		$params = [
+			"userID"  => $this -> userUID($iduser),
+			"chatID"  => $chatid,
+			"message" => $text
+		];
+
+		$url      = "tcp://".$this -> settings['host'].":".$this -> settings['httpport'];
+
+		// соединяемся с локальным tcp-сервером
+		$socket = stream_socket_client($url, $errno, $errstr);
+
+
+		if (!$socket) {
+			return [
+				"error"  => $errstr,
+				"url"    => $url,
+				"params" => $params
+			];
+		}
+
+		// отправляем сообщение
+		fwrite($socket, json_encode($params)."\n");
+		$result = fread($socket, 26);
+		fclose($socket);
+
+		return [
+			"result" => $result,
+			"url"    => $url,
+			"params" => $params
+		];
+
+	}
+
+	/**
+	 * Отправка сообщения пользователю
+	 *
+	 * @param int $iduser
+	 * @param string $chatid
+	 * @param string|array $text
+	 * @return array
+	 */
+	public function sendHTTPMessage(int $iduser = 0, string $chatid = '', $text = NULL): array {
 
 		$header = [
 			"accept" => "application/json",
@@ -102,7 +145,7 @@ class WebSocket {
 			"url"    => $url,
 			"code"   => $req -> info['http_code'],
 			"data"   => json_decode($req -> response, true),
-			//"info" => $req -> info,
+			"info"   => $req -> info,
 			"error"  => $req -> error,
 			"params" => $params
 		];

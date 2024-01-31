@@ -34,7 +34,8 @@ if (!empty($config['context'])) {
 }
 
 // адрес http сервера
-$protocol = $config['protocol'] === 'wss' ? 'https' : 'http';
+//$protocol = $config['protocol'] === 'wss' ? 'https' : 'http';
+$protocol = "tcp";
 $httpurl  = $protocol."://".$config['host'].":".$config['httpport'];
 
 // Channel server.
@@ -45,7 +46,9 @@ $ws_worker          = new Worker("websocket://".$config['host'].":".$config['wsp
 $ws_worker -> name  = 'pusher';
 $ws_worker -> count = 1;
 
-$ws_worker -> onWorkerStart = static function ($ws_worker) use (&$connections, $httpurl, $config) {
+$ws_worker -> onWorkerStart = static function ($ws_worker) use (&$connections) {
+
+	global $connections;
 
 	/*
 	$http_worker                  = new Worker($httpurl);
@@ -66,17 +69,31 @@ $ws_worker -> onWorkerStart = static function ($ws_worker) use (&$connections, $
 	// Channel client.
 	Channel\Client ::connect();
 
-	$event_name = $ws_worker -> id;
+	$event_name = 'message';
 
-	Channel\Client ::on($event_name, static function ($event_data) use ($ws_worker) {
-		$to_connection_id = $event_data['to_connection_id'];
-		$message          = $event_data['content'];
-		if (!isset($ws_worker -> connections[$to_connection_id])) {
+	Channel\Client ::on($event_name, static function ($event_data) use ($ws_worker, &$connections) {
+
+		global $connections;
+
+		//echo $event_name."\n";
+		//print_r($event_data)."\n";
+
+		$userID    = $event_data['userID'];
+		$channelID = $event_data['channelID'];
+		$message   = $event_data['message'];
+
+		//print_r($ws_worker -> connections)."\n";
+		//print_r($ws_worker)."\n";
+
+		if (!isset($ws_worker -> connections[$channelID][$userID])) {
 			echo "connection not exists\n";
 			return;
 		}
-		$to_connection = $ws_worker -> connections[$to_connection_id];
+		$to_connection = $ws_worker -> connections[$channelID][$userID];
 		$to_connection -> send($message);
+
+		echo "Sended message: ".$message."\n";
+
 	});
 
 	// пингуем каждые 5 секунд
@@ -123,7 +140,9 @@ $ws_worker -> onConnect = static function ($connection) {
 	// echo "New connection\n";
 
 	// Эта функция выполняется при подключении пользователя к WebSocket-серверу
-	$connection -> onWebSocketConnect = static function ($connection) use (&$connections) {
+	global $ws_worker;
+
+	$connection -> onWebSocketConnect = static function ($connection) use ($ws_worker, &$connections) {
 
 		// Добавляем соединение в список
 		$connection -> userID    = $_GET['userID'];
@@ -137,7 +156,8 @@ $ws_worker -> onConnect = static function ($connection) {
 		$connection -> pingWithoutResponseCount = 0;
 
 		// формируем список подключений с разбивкой по channelID
-		$connections[$connection -> channelID][$connection -> userID] = $connection;
+		$connections[$connection -> channelID][$connection -> userID]              = $connection;
+		$ws_worker -> connections[$connection -> channelID][$connection -> userID] = $connection;
 
 		$messageData = [
 			'action'    => 'Authorized',
@@ -258,11 +278,19 @@ $http_worker -> onWorkerStart = static function () {
 };
 $http_worker -> onMessage     = static function ($connection, $data) {
 
-	$data = json_decode($data);
-	echo json_encode($data)."\n";
-	echo json_encode($_GET)."\n";
-
 	$connection -> send('ok');
+
+	$data = json_decode($data, true);
+
+	if (!empty($data['userID']) && !empty($data['chatID'])) {
+
+		Channel\Client ::publish('message', [
+			'userID'    => $data['userID'],
+			'channelID' => $data['chatID'],
+			'message'   => $data['message']
+		]);
+
+	}
 
 	/*
 	if (isset($_GET['to_worker_id']) && isset($_GET['to_connection_id'])) {

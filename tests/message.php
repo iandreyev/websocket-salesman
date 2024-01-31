@@ -16,6 +16,7 @@ require_once $rootpath.'/php/functions.php';
 require_once $rootpath.'/vendor/autoload.php';
 
 $websocket = new WebSocket(25);
-$res = $websocket -> sendMessage(25, $websocket ->settings['chatID'], '{"message":"test"}');
+$res = $websocket -> sendMessage(25, $websocket ->settings['chatID'], 'ЧТО ЗА НАХРЕН?');
+//$res = $websocket -> sendHTTPMessage(25, $websocket ->settings['chatID'], 'test');
 
 print_r($res);
