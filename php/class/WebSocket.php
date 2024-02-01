@@ -30,7 +30,6 @@ class WebSocket {
 		$rootpath = dirname(__DIR__, 2);
 
 		// загружаем конфиг
-		//$config = yaml_parse_file($rootpath.'/cached/settings.yaml');
 		$config = json_decode(file_get_contents($rootpath.'/cached/settings.json'), true);
 
 		if ($iduser > 0) {
