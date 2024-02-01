@@ -198,6 +198,10 @@ $ws_worker -> onMessage = static function ($connection, $message) use (&$connect
 			$messageData['userID']    = $connection -> userID;
 			$messageData['channelID'] = $connection -> channelID;
 
+			if( !empty($messageData['payload']) ){
+				$messageData['message'] = $messageData['payload'];
+			}
+
 			if (isset($messageData['message'])) {
 
 				// Преобразуем специальные символы в HTML-сущности в тексте сообщения
@@ -209,14 +213,14 @@ $ws_worker -> onMessage = static function ($connection, $message) use (&$connect
 				if ($toUserId === 0) {
 
 					foreach ($connections[$connection -> channelID] as $c) {
-						$c -> send(json_encode($messageData, JSON_THROW_ON_ERROR));
+						$c -> send(json_encode($messageData));
 					}
 
 				}
 				elseif (isset($connections[$connection -> channelID][$toUserId])) {
 
 					// Отправляем приватное сообщение указанному пользователю
-					$connections[$connection -> channelID][$toUserId] -> send(json_encode($messageData, JSON_THROW_ON_ERROR));
+					$connections[$connection -> channelID][$toUserId] -> send(json_encode($messageData));
 
 				} // если не существует, то отправляем ошибку отправителю
 				else {
@@ -287,7 +291,7 @@ $http_worker -> onMessage     = static function ($connection, $data) {
 		Channel\Client ::publish('message', [
 			'userID'    => $data['userID'],
 			'channelID' => $data['chatID'],
-			'message'   => $data['message']
+			'payload'   => $data['payload']
 		]);
 
 	}

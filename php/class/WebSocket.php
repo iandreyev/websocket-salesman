@@ -78,22 +78,21 @@ class WebSocket {
 	 *
 	 * @param int $iduser
 	 * @param string $chatid
-	 * @param string|array $text
+	 * @param string|array $payload
 	 * @return array
 	 */
-	public function sendMessage(int $iduser = 0, string $chatid = '', $text = NULL): array {
+	public function sendMessage(int $iduser = 0, string $chatid = '', $payload = NULL): array {
 
 		$params = [
 			"userID"  => $this -> userUID($iduser),
 			"chatID"  => $chatid,
-			"message" => $text
+			"payload" => $payload
 		];
 
 		$url      = "tcp://".$this -> settings['host'].":".$this -> settings['httpport'];
 
 		// соединяемся с локальным tcp-сервером
 		$socket = stream_socket_client($url, $errno, $errstr);
-
 
 		if (!$socket) {
 			return [
