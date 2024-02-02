@@ -59,15 +59,19 @@ $ws_worker -> onWorkerStart = static function ($ws_worker) use (&$connections) {
 
 		$userID    = $event_data['userID'];
 		$channelID = $event_data['channelID'];
-		$message   = is_array($event_data['payload']) ? json_encode_cyr($event_data['payload']) : $event_data['payload'];
+		$message   = is_array($event_data['payload']) ? json_encode($event_data['payload']) : $event_data['payload'];
 
 		if (!isset($ws_worker -> connections[$channelID][$userID])) {
 			echo "connection not exists\n";
 			return;
 		}
 
-		$to_connection = $ws_worker -> connections[$channelID][$userID];
-		$to_connection -> send($message);
+		foreach ($ws_worker -> connections[$channelID][$userID] as $c) {
+
+			$to_connection = $ws_worker -> connections[$channelID][$userID][$c -> id];
+			$to_connection -> send($message);
+
+		}
 
 		//echo "Sended message: ".$message."\n";
 
@@ -82,14 +86,15 @@ $ws_worker -> onWorkerStart = static function ($ws_worker) use (&$connections) {
 
 		foreach ($connections as $channelID) {
 
-			foreach ($channelID as $c) {
+			// отправляем пинг
+			foreach ($channelID as $userID => $c) {
 
 				// Если ответ не пришел 3 раза, то удаляем соединение из списка
 				if ($c -> pingWithoutResponseCount >= 3) {
 
 					printf("Channel: %s, UserID: %s - Unregistered\n", $channelID, $c -> userID);
 
-					unset($connections[$channelID][$c -> userID]);
+					unset($connections[$channelID][$userID][$c -> id]);
 
 					// уничтожаем соединение
 					$c -> destroy();
@@ -130,8 +135,8 @@ $ws_worker -> onConnect = static function ($connection) {
 		$connection -> pingWithoutResponseCount = 0;
 
 		// формируем список подключений с разбивкой по channelID
-		$connections[$connection -> channelID][$connection -> userID]              = $connection;
-		$ws_worker -> connections[$connection -> channelID][$connection -> userID] = $connection;
+		$connections[$connection -> channelID][$connection -> userID][$connection -> id]              = $connection;
+		$ws_worker -> connections[$connection -> channelID][$connection -> userID][$connection -> id] = $connection;
 
 		$messageData = [
 			'action'    => 'Authorized',
@@ -180,11 +185,6 @@ $ws_worker -> onMessage = static function ($connection, $message) use (&$connect
 
 			if (!empty($messageData['message'])) {
 
-				// Преобразуем специальные символы в HTML-сущности в тексте сообщения
-				// $messageData['message'] = htmlspecialchars($messageData['message']);
-				// Заменяем текст заключенный в фигурные скобки на жирный
-				// $messageData['message'] = preg_replace('/\{(.*)\}/u', '<b>\\1</b>', $messageData['message']);
-
 				// общая отправка в канал
 				if ($toUserId === 0) {
 
@@ -193,10 +193,12 @@ $ws_worker -> onMessage = static function ($connection, $message) use (&$connect
 					}
 
 				}
-				// Отправляем приватное сообщение указанному пользователю
+				// Отправляем приватное сообщение указанному пользователю во все его соединения
 				elseif (isset($connections[$connection -> channelID][$toUserId])) {
 
-					$connections[$connection -> channelID][$toUserId] -> send(json_encode($messageData));
+					foreach ($connections[$connection -> channelID][$toUserId] as $c) {
+						$c -> send(json_encode($messageData));
+					}
 
 				}
 				// если не существует, то отправляем ошибку отправителю
@@ -235,7 +237,7 @@ $ws_worker -> onClose = static function ($connection) {
 	}
 
 	// Удаляем соединение из списка
-	unset($connections[$connection -> channelID][$connection -> userID]);
+	//unset($connections[$connection -> channelID][$connection -> userID]);
 
 	// Оповещаем всех пользователей о выходе участника из чата
 	$messageData = [
@@ -248,6 +250,8 @@ $ws_worker -> onClose = static function ($connection) {
 	foreach ($connections[$connection -> channelID] as $c) {
 		$c -> send($message);
 	}
+
+	//unset($connection);
 
 };
 
