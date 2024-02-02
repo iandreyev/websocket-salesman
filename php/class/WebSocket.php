@@ -103,7 +103,7 @@ class WebSocket {
 		}
 
 		// отправляем сообщение
-		fwrite($socket, json_encode($params)."\n");
+		fwrite($socket, json_encode_cyr($params)."\n");
 		$result = fread($socket, 26);
 		fclose($socket);
 

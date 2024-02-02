@@ -1,4 +1,4 @@
-# /opt/php74/bin/php
+#! /opt/php74/bin/php
 <?php
 /* ============================ */
 /*         SalesMan CRM         */
@@ -50,22 +50,6 @@ $ws_worker -> onWorkerStart = static function ($ws_worker) use (&$connections) {
 
 	global $connections;
 
-	/*
-	$http_worker                  = new Worker($httpurl);
-	$http_worker -> name          = 'publisher';
-	$http_worker -> onWorkerStart = static function () use (&$connections, $httpurl, $config) {
-		echo "New http worker\n";
-		echo json_encode($config)."\n";
-	};
-	$http_worker -> onMessage     = static function ($connection, $data) use (&$connections) {
-
-		$data = json_decode($data);
-		echo json_encode($data)."\n";
-
-	};
-	$http_worker -> listen();
-	*/
-
 	// Channel client.
 	Channel\Client ::connect();
 
@@ -73,26 +57,21 @@ $ws_worker -> onWorkerStart = static function ($ws_worker) use (&$connections) {
 
 	Channel\Client ::on($event_name, static function ($event_data) use ($ws_worker, &$connections) {
 
-		global $connections;
-
-		//echo $event_name."\n";
-		//print_r($event_data)."\n";
-
 		$userID    = $event_data['userID'];
 		$channelID = $event_data['channelID'];
-		$message   = $event_data['message'];
-
-		//print_r($ws_worker -> connections)."\n";
-		//print_r($ws_worker)."\n";
+		$message   = is_array($event_data['payload']) ? json_encode_cyr($event_data['payload']) : $event_data['payload'];
 
 		if (!isset($ws_worker -> connections[$channelID][$userID])) {
 			echo "connection not exists\n";
 			return;
 		}
+
 		$to_connection = $ws_worker -> connections[$channelID][$userID];
 		$to_connection -> send($message);
 
-		echo "Sended message: ".$message."\n";
+		//echo "Sended message: ".$message."\n";
+
+		printf("to userID: %s, channelID: %s sended message: %s\n", $userID, $channelID, $message);
 
 	});
 
@@ -136,9 +115,6 @@ $ws_worker -> onWorkerStart = static function ($ws_worker) use (&$connections) {
 // Обработка нового подключения
 $ws_worker -> onConnect = static function ($connection) {
 
-	// $connection -> send('This message was sent from Backend(index.php), when server was started.');
-	// echo "New connection\n";
-
 	// Эта функция выполняется при подключении пользователя к WebSocket-серверу
 	global $ws_worker;
 
@@ -149,8 +125,6 @@ $ws_worker -> onConnect = static function ($connection) {
 		$connection -> channelID = $_GET['channelID'];
 
 		echo "New WebSocket connection\n";
-		//echo json_encode($connection)."\n";
-		echo json_encode($_GET)."\n";
 
 		// счетчик безответных пингов
 		$connection -> pingWithoutResponseCount = 0;
@@ -174,6 +148,8 @@ $ws_worker -> onMessage = static function ($connection, $message) use (&$connect
 
 	// Publish broadcast event to all worker processes.
 	// Channel\Client ::publish('broadcast', $message);
+
+	print $message."\n";
 
 	if (!empty($message)) {
 
@@ -199,15 +175,15 @@ $ws_worker -> onMessage = static function ($connection, $message) use (&$connect
 			$messageData['channelID'] = $connection -> channelID;
 
 			if( !empty($messageData['payload']) ){
-				$messageData['message'] = $messageData['payload'];
+				$messageData['message'] = is_array($messageData['payload']) ? json_encode($messageData['payload']) : $messageData['payload'];
 			}
 
-			if (isset($messageData['message'])) {
+			if (!empty($messageData['message'])) {
 
 				// Преобразуем специальные символы в HTML-сущности в тексте сообщения
-				$messageData['message'] = htmlspecialchars($messageData['message']);
+				// $messageData['message'] = htmlspecialchars($messageData['message']);
 				// Заменяем текст заключенный в фигурные скобки на жирный
-				$messageData['message'] = preg_replace('/\{(.*)\}/u', '<b>\\1</b>', $messageData['message']);
+				// $messageData['message'] = preg_replace('/\{(.*)\}/u', '<b>\\1</b>', $messageData['message']);
 
 				// общая отправка в канал
 				if ($toUserId === 0) {
@@ -217,18 +193,19 @@ $ws_worker -> onMessage = static function ($connection, $message) use (&$connect
 					}
 
 				}
+				// Отправляем приватное сообщение указанному пользователю
 				elseif (isset($connections[$connection -> channelID][$toUserId])) {
 
-					// Отправляем приватное сообщение указанному пользователю
 					$connections[$connection -> channelID][$toUserId] -> send(json_encode($messageData));
 
-				} // если не существует, то отправляем ошибку отправителю
+				}
+				// если не существует, то отправляем ошибку отправителю
 				else {
 
 					// и отправителю
 					$messageData['error']   = true;
 					$messageData['message'] = 'Не найден получатель. Возможно он оффлайн.';
-					$connection -> send(json_encode($messageData, JSON_THROW_ON_ERROR));
+					$connection -> send(json_encode($messageData));
 
 				}
 
@@ -250,7 +227,7 @@ $ws_worker -> onMessage = static function ($connection, $message) use (&$connect
 $ws_worker -> onClose = static function ($connection) {
 
 	echo "Connection closed\n";
-	echo json_encode($connection)."\n";
+	//echo json_encode($connection)."\n";
 
 	// Эта функция выполняется при закрытии соединения
 	if (!isset($connections[$connection -> channelID])) {
@@ -284,6 +261,8 @@ $http_worker -> onMessage     = static function ($connection, $data) {
 
 	$connection -> send('ok');
 
+	// print $data."\n";
+
 	$data = json_decode($data, true);
 
 	if (!empty($data['userID']) && !empty($data['chatID'])) {
@@ -295,25 +274,6 @@ $http_worker -> onMessage     = static function ($connection, $data) {
 		]);
 
 	}
-
-	/*
-	if (isset($_GET['to_worker_id']) && isset($_GET['to_connection_id'])) {
-		$event_name       = $_GET['to_worker_id'];
-		$to_connection_id = $_GET['to_connection_id'];
-		$content          = $_GET['content'];
-		Channel\Client ::publish($event_name, [
-			'to_connection_id' => $to_connection_id,
-			'content'          => $content
-		]);
-	}
-	else {
-		$event_name = 'broadcast';
-		$content    = $_GET['content'];
-		Channel\Client ::publish($event_name, [
-			'content' => $content
-		]);
-	}
-	*/
 
 };
 
