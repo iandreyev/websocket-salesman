@@ -9,3 +9,26 @@
 
 ## Структура
 
+
+
+## Стартовый скрипт
+
+Прилагаемый в комплекте файл `init/wsserver.service` необходимо скопировать в каталог `/etc/systemd/system`
+
+```shell
+cd /tmp/wsserver
+cp init/wsserver.service /etc/systemd/system/
+systemctl enable --now wsserver
+```
+
+Дальнейшее управление службой производится следующими командами:
+```shell
+systemctl status wsserver
+systemctl stop wsserver
+systemctl start wsserver
+```
+
+Посмотреть логи
+```shell
+journalctl -u wsserver
+```

@@ -5,8 +5,11 @@
 /* (C) 2024 Vladislav Andreev   */
 /*       SalesMan Project       */
 /*        www.isaler.ru         */
-
 /* ============================ */
+
+/**
+ * Пример отправки сообщения пользователю через ws-сервер
+ */
 
 use Salesman\WebSocket;
 
@@ -16,8 +19,8 @@ require_once $rootpath.'/vendor/autoload.php';
 
 $message = [
 	"event"   => "message",
-	//"payload" => "Это тестовое сообщение",
-	"payload" => "Ты это тоже видишь?",
+	"payload" => "Это тестовое сообщение",
+	//"payload" => "Ты это тоже видишь?",
 ];
 
 $websocket = new WebSocket(25);

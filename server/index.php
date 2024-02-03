@@ -11,6 +11,7 @@
 error_reporting(E_ERROR);
 
 use Salesman\WebSocket;
+use Workerman\Connection\TcpConnection;
 use Workerman\Lib\Timer;
 use Workerman\Worker;
 
@@ -225,32 +226,13 @@ $ws_worker -> onMessage = static function ($connection, $message) use (&$connect
 };
 
 // Emitted when connection closed
-$ws_worker -> onClose = static function ($connection) {
+$ws_worker -> onClose = static function (TcpConnection $connection) {
 
-	echo "Connection closed\n";
-	//echo json_encode($connection)."\n";
-
-	// Эта функция выполняется при закрытии соединения
-	if (!isset($connections[$connection -> channelID])) {
-		return;
-	}
+	echo "Connection closed: userID ".$connection -> userID.", channelID: ".$connection ->channelID."\n";
+	//print_r($connection);
 
 	// Удаляем соединение из списка
 	//unset($connections[$connection -> channelID][$connection -> userID]);
-
-	// Оповещаем всех пользователей о выходе участника из чата
-	$messageData = [
-		'action'    => 'Disconnected',
-		'userID'    => $connection -> userID,
-		'channelID' => $connection -> channelID
-	];
-	$message     = json_encode($messageData);
-
-	foreach ($connections[$connection -> channelID] as $c) {
-		$c -> send($message);
-	}
-
-	//unset($connection);
 
 };
 

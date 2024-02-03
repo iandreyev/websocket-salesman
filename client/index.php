@@ -44,7 +44,7 @@ $server = $config['protocol']."://".$config['host'].":".$config['wsport']."/serv
 		}
 	}
 	ws.onmessage = function (event) {
-		console.log("Получены данные", event.data)
+		console.log(event.data)
 	};
 	ws.onerror = function (error) {
 		console.log("Ошибка: " + error.message)
