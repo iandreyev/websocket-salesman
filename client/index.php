@@ -12,8 +12,6 @@ use Salesman\WebSocket;
 
 $rootpath = dirname(__DIR__);
 
-//require_once $rootpath.'/php/class/WebSocket.php';
-require_once $rootpath.'/php/functions.php';
 require_once $rootpath.'/vendor/autoload.php';
 
 $websocket = new WebSocket(25);
