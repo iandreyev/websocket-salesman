@@ -30,7 +30,7 @@ class WebSocket {
 		$rootpath = dirname(__DIR__, 2);
 
 		// загружаем конфиг
-		$config = json_decode(file_get_contents($rootpath.'/cached/settings.json'), true);
+		$config = json_decode(file_get_contents($rootpath.'/settings/settings.json'), true);
 
 		if ($iduser > 0) {
 			$this -> iduser = $iduser;

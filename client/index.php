@@ -5,7 +5,6 @@
 /* (C) 2024 Vladislav Andreev   */
 /*       SalesMan Project       */
 /*        www.isaler.ru         */
-
 /* ============================ */
 
 use Salesman\WebSocket;
@@ -19,7 +18,7 @@ $config    = $websocket -> settings;
 
 $server = $config['protocol']."://".$config['host'].":".$config['wsport']."/server/?userID=".$config['userID']."&channelID=".$config['chatID'];
 ?>
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!DOCTYPE html>
 <html lang="ru">
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
@@ -30,37 +29,32 @@ $server = $config['protocol']."://".$config['host'].":".$config['wsport']."/serv
 	
 	let ws = new WebSocket('<?=$server?>');
 	
-	/*ws.addEventListener('message', (event) => {
-		console.info('Frontend got message: ' + event.data); // get from server
-	})*/
-	
 	ws.onopen = function () {
-		console.log("Connected");
-	};
+		console.log("Connected")
+	}
 	ws.onclose = function (event) {
 		if (event.wasClean) {
-			console.log('Соединение закрыто чисто');
+			console.log('Соединение закрыто чисто')
 		}
 		else if (event.code === 1006) {
-			console.log('Соединение закрыто как 1006');
+			console.log('Соединение закрыто как 1006')
 		}
 		else {
-			console.log('Обрыв соединения');
+			console.log('Обрыв соединения')
 		}
-	};
-	
+	}
 	ws.onmessage = function (event) {
-		console.log("Получены данные " + event.data);
+		console.log("Получены данные", event.data)
 	};
-	
 	ws.onerror = function (error) {
-		console.log("Ошибка " + error.message);
+		console.log("Ошибка: " + error.message)
 	};
 	
 	const func = () => {
-		ws.send('Hello Admin!'); //send on server
+		//send on server
+		ws.send('Hello Admin!')
 	};
-	setTimeout(func, 2 * 1000);
+	setTimeout(func, 2 * 1000)
 
 </script>
 </body>
