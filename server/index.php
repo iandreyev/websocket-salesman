@@ -16,7 +16,6 @@ use Workerman\Worker;
 
 $rootpath = dirname(__DIR__);
 
-//require_once $rootpath.'/php/class/WebSocket.php';
 require_once $rootpath.'/vendor/autoload.php';
 
 // загружаем конфиг

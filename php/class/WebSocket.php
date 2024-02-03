@@ -103,48 +103,13 @@ class WebSocket {
 		}
 
 		// отправляем сообщение
-		fwrite($socket, json_encode_cyr($params)."\n");
+		fwrite($socket, json_encode($params)."\n");
 		$result = fread($socket, 26);
 		fclose($socket);
 
 		return [
 			"result" => $result,
 			"url"    => $url,
-			"params" => $params
-		];
-
-	}
-
-	/**
-	 * Отправка сообщения пользователю
-	 *
-	 * @param int $iduser
-	 * @param string $chatid
-	 * @param string|array $text
-	 * @return array
-	 */
-	public function sendHTTPMessage(int $iduser = 0, string $chatid = '', $text = NULL): array {
-
-		$header = [
-			"accept" => "application/json",
-		];
-		$params = [
-			"userID"  => $this -> userUID($iduser),
-			"chatID"  => $chatid,
-			"message" => $text
-		];
-
-		$protocol = $this -> settings['protocol'] === 'wss' ? 'https' : 'http';
-		$url      = $protocol."://".$this -> settings['host'].":".$this -> settings['httpport'];
-
-		$req = SendRequestCurl($url, $params, $header);
-
-		return [
-			"url"    => $url,
-			"code"   => $req -> info['http_code'],
-			"data"   => json_decode($req -> response, true),
-			"info"   => $req -> info,
-			"error"  => $req -> error,
 			"params" => $params
 		];
 
