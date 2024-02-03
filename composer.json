@@ -24,6 +24,7 @@
         "workerman/workerman": "^4.0",
         "workerman/channel": "^1.0",
         "ext-json": "*",
-        "ext-curl": "*"
+        "ext-curl": "*",
+        "ext-posix": "*"
     }
 }
