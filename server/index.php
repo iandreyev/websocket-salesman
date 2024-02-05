@@ -62,20 +62,16 @@ $ws_worker -> onWorkerStart = static function ($ws_worker) use (&$connections) {
 		$message   = is_array($event_data['payload']) ? json_encode($event_data['payload']) : $event_data['payload'];
 
 		if (!isset($ws_worker -> connections[$channelID][$userID])) {
-			echo "connection not exists\n";
+			printf("%s:: Connection not exists - userID: %s, channelID: %s\n", WebSocket::current_datumtime(), $userID, $channelID);
 			return;
 		}
 
 		foreach ($ws_worker -> connections[$channelID][$userID] as $c) {
-
 			$to_connection = $ws_worker -> connections[$channelID][$userID][$c -> id];
 			$to_connection -> send($message);
-
 		}
 
-		//echo "Sended message: ".$message."\n";
-
-		printf("to userID: %s, channelID: %s sended message: %s\n", $userID, $channelID, $message);
+		printf("%s:: Mesage to userID: %s, channelID: %s sended message: %s\n", WebSocket::current_datumtime(), $userID, $channelID, $message);
 
 	});
 
@@ -92,7 +88,7 @@ $ws_worker -> onWorkerStart = static function ($ws_worker) use (&$connections) {
 				// Если ответ не пришел 3 раза, то удаляем соединение из списка
 				if ($c -> pingWithoutResponseCount >= 3) {
 
-					printf("Channel: %s, UserID: %s - Unregistered\n", $channelID, $c -> userID);
+					printf("%s:: Channel: %s, UserID: %s - Unregistered\n", WebSocket::current_datumtime(), $channelID, $c -> userID);
 
 					unset($connections[$channelID][$userID][$c -> id]);
 
@@ -129,7 +125,7 @@ $ws_worker -> onConnect = static function ($connection) {
 		$connection -> userID    = $_GET['userID'];
 		$connection -> channelID = $_GET['channelID'];
 
-		echo "New WebSocket connection\n";
+		printf("%s:: New WebSocket connection\n", WebSocket::current_datumtime() );
 
 		// счетчик безответных пингов
 		$connection -> pingWithoutResponseCount = 0;
@@ -154,7 +150,7 @@ $ws_worker -> onMessage = static function ($connection, $message) use (&$connect
 	// Publish broadcast event to all worker processes.
 	// Channel\Client ::publish('broadcast', $message);
 
-	print $message."\n";
+	// print $message."\n";
 
 	if (!empty($message)) {
 
@@ -172,8 +168,8 @@ $ws_worker -> onMessage = static function ($connection, $message) use (&$connect
 		// обычные сообщения
 		else {
 
-			printf("Channel: %s, UserID: %s\n", $connection -> channelID, $connection -> userID);
-			echo "Message: $message\n";
+			printf("%s:: Channel: %s, UserID: %s, Message: %s\n", WebSocket::current_datumtime(), $connection -> channelID, $connection -> userID, $message);
+			//echo "Message: $message\n";
 
 			// Дополняем сообщение данными об отправителе
 			$messageData['userID']    = $connection -> userID;
@@ -228,7 +224,7 @@ $ws_worker -> onMessage = static function ($connection, $message) use (&$connect
 // Emitted when connection closed
 $ws_worker -> onClose = static function (TcpConnection $connection) {
 
-	echo "Connection closed: userID ".$connection -> userID.", channelID: ".$connection ->channelID."\n";
+	printf("%s:: Connection closed: userID %s, channelID: %s\n", WebSocket::current_datumtime(), $connection -> userID, $connection ->channelID);
 	//print_r($connection);
 
 	// Удаляем соединение из списка

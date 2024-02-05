@@ -174,4 +174,19 @@ class WebSocket {
 
 	}
 
+	/**
+	 * выдает текущую дату+время
+	 * если заданы параметры, то со смещением минус Х часов, Х минут
+	 *
+	 * @param int $hours
+	 * @param int $minutes
+	 *
+	 * @return false|string
+	 */
+	public static function current_datumtime(int $hours = 0, int $minutes = 0) {
+
+		return date('Y-m-d H:i:s', mktime(date('H') - $hours, date('i') - $minutes, date('s'), date('m'), date('d'), date('Y')));
+
+	}
+
 }
