@@ -30,9 +30,9 @@ $server = $config['protocol']."://".$config['host'].":".$config['wsport']."/serv
 </div>
 <script>
 	
-	connect();
+	//connect();
 
-	function connect(){
+	//function connect(){
 
 		let ws = new WebSocket('<?=$server?>')
 
@@ -68,7 +68,7 @@ $server = $config['protocol']."://".$config['host'].":".$config['wsport']."/serv
 			console.log("Ошибка: " + error.message)
 		}
 
-	}
+	//}
 	
 	const func = () => {
 		//send on server

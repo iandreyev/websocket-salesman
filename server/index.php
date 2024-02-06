@@ -1,4 +1,4 @@
-#! /opt/php74/bin/php
+global$http_worker; #! /opt/php74/bin/php
 <?php
 /* ============================ */
 /*         SalesMan CRM         */
@@ -49,14 +49,14 @@ $ws_worker -> count = 1;
 // Старт воркера
 $ws_worker -> onWorkerStart = static function ($ws_worker) use (&$connections) {
 
-	//global $connections;
-
 	// Channel client.
 	Channel\Client ::connect();
 
 	$event_name = 'message';
 
-	Channel\Client ::on($event_name, static function ($event_data) use ($ws_worker) {
+	Channel\Client ::on($event_name, static function ($event_data) use ($ws_worker, &$connections) {
+
+		//global $tcpconnection;
 
 		$userID    = $event_data['userID'];
 		$channelID = $event_data['channelID'];
@@ -95,7 +95,7 @@ $ws_worker -> onWorkerStart = static function ($ws_worker) use (&$connections) {
 
 					printf("%s:: Channel: %s, UserID: %s - Unregistered\n", WebSocket::current_datumtime(), $channelID, $c -> userID);
 
-					unset($connections[$channelID][$userID][$c -> id]);
+					//unset($connections[$channelID][$userID][$c -> id]);
 
 					// уничтожаем соединение
 					$c -> destroy();
@@ -119,28 +119,33 @@ $ws_worker -> onWorkerStart = static function ($ws_worker) use (&$connections) {
 };
 
 // Обработка нового подключения
-$ws_worker -> onConnect = static function ($connection) {
+$ws_worker -> onConnect = static function ($connection) use ($ws_worker) {
+
+	printf("%s:: New connection - ID: %s, userID: %s, channelID: %s\n", WebSocket::current_datumtime(), $connection -> id, $connection -> userID, $connection -> channelID );
 
 	// Эта функция выполняется при подключении пользователя к WebSocket-серверу
-	global $ws_worker;
+	$connection -> onWebSocketConnect = static function ($connection) use (&$connections) {
 
-	$connection -> onWebSocketConnect = static function ($connection) use ($ws_worker, &$connections) {
+		global $ws_worker;
+
+		// $connection -> send('Hello, you are connected!');
 
 		// Добавляем соединение в список
 		$connection -> userID    = $_GET['userID'];
 		$connection -> channelID = $_GET['channelID'];
-
-		printf("%s:: New WebSocket connection - ID: %s, userID: %s, channelID: %s\n", WebSocket::current_datumtime(), $connection -> id, $connection -> userID, $connection -> channelID );
-
-		// счетчик безответных пингов
-		$connection -> pingWithoutResponseCount = 0;
 
 		$messageData = [
 			'event'     => 'Authorized',
 			'userID'    => $connection -> userID,
 			'channelID' => $connection -> channelID,
 		];
+		$connection -> send('Hello, you are authorized!');
 		$connection -> send(json_encode($messageData));
+
+		// счетчик безответных пингов
+		// $connection -> pingWithoutResponseCount = 0;
+
+		printf("%s:: New WebSocket connection - ID: %s, userID: %s, channelID: %s\n", WebSocket::current_datumtime(), $connection -> id, $connection -> userID, $connection -> channelID );
 
 		// формируем список подключений с разбивкой по channelID
 		$connections[$connection -> channelID][$connection -> userID][$connection -> id]              = $connection;
@@ -225,13 +230,14 @@ $ws_worker -> onMessage = static function ($connection, $message) use (&$connect
 };
 
 // Закрытие соединения
-$ws_worker -> onClose = static function (TcpConnection $connection) {
+//$ws_worker -> onClose = static function () use ($ws_worker) {
+$ws_worker -> onClose = static function (TcpConnection $connection) use (&$connections, $ws_worker) {
 
-	printf("%s:: Connection closed: userID %s, channelID: %s\n", WebSocket::current_datumtime(), $connection -> userID, $connection ->channelID);
+	printf("%s:: Connection closed: ID: %s, userID %s, channelID: %s\n", WebSocket::current_datumtime(), $connection -> id, $connection -> userID, $connection -> channelID);
 	//print_r($connection);
 
 	// Удаляем соединение из списка
-	//unset($connections[$connection -> channelID][$connection -> userID]);
+	unset($connections[$connection -> channelID][$connection -> userID][$connection -> id], $ws_worker -> connections[$connection -> channelID][$connection -> userID][$connection -> id]);
 
 };
 
@@ -241,9 +247,10 @@ $http_worker -> name          = 'publisher';
 $http_worker -> onWorkerStart = static function () {
 	Channel\Client ::connect();
 };
-$http_worker -> onMessage     = static function ($connection, $data) {
+$http_worker -> onMessage     = static function ($tcpconnection, $data) {
 
-	$connection -> send('ok');
+	$tcpconnection -> send('ok');
+	//$tcpconnection -> send($tcpconnection -> id);
 
 	// print $data."\n";
 
