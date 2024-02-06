@@ -49,18 +49,21 @@ $ws_worker -> count = 1;
 // Старт воркера
 $ws_worker -> onWorkerStart = static function ($ws_worker) use (&$connections) {
 
-	global $connections;
+	//global $connections;
 
 	// Channel client.
 	Channel\Client ::connect();
 
 	$event_name = 'message';
 
-	Channel\Client ::on($event_name, static function ($event_data) use ($ws_worker, &$connections) {
+	Channel\Client ::on($event_name, static function ($event_data) use ($ws_worker) {
 
 		$userID    = $event_data['userID'];
 		$channelID = $event_data['channelID'];
 		$message   = is_array($event_data['payload']) ? json_encode($event_data['payload']) : $event_data['payload'];
+
+		//print_r($connections);
+		//print_r($ws_worker -> connections[$channelID][$userID]);
 
 		if (!isset($ws_worker -> connections[$channelID][$userID])) {
 			printf("%s:: Connection not exists - userID: %s, channelID: %s\n", WebSocket::current_datumtime(), $userID, $channelID);
@@ -70,9 +73,10 @@ $ws_worker -> onWorkerStart = static function ($ws_worker) use (&$connections) {
 		foreach ($ws_worker -> connections[$channelID][$userID] as $c) {
 			$to_connection = $ws_worker -> connections[$channelID][$userID][$c -> id];
 			$to_connection -> send($message);
+			printf("%s:: Message to ID: %s, userID: %s, channelID: %s sended message: %s\n", WebSocket::current_datumtime(), $c -> id, $userID, $channelID, $message);
 		}
 
-		printf("%s:: Mesage to userID: %s, channelID: %s sended message: %s\n", WebSocket::current_datumtime(), $userID, $channelID, $message);
+		// printf("%s:: Mesage to userID: %s, channelID: %s sended message: %s\n", WebSocket::current_datumtime(), $userID, $channelID, $message);
 
 	});
 
@@ -99,7 +103,7 @@ $ws_worker -> onWorkerStart = static function ($ws_worker) use (&$connections) {
 				}
 				else {
 
-					$c -> send(json_encode(["action" => "Ping"]));
+					$c -> send(json_encode(["event" => "Ping"]));
 
 					// увеличиваем счетчик пингов
 					$c -> pingWithoutResponseCount++;
@@ -126,21 +130,21 @@ $ws_worker -> onConnect = static function ($connection) {
 		$connection -> userID    = $_GET['userID'];
 		$connection -> channelID = $_GET['channelID'];
 
-		printf("%s:: New WebSocket connection\n", WebSocket::current_datumtime() );
+		printf("%s:: New WebSocket connection - ID: %s, userID: %s, channelID: %s\n", WebSocket::current_datumtime(), $connection -> id, $connection -> userID, $connection -> channelID );
 
 		// счетчик безответных пингов
 		$connection -> pingWithoutResponseCount = 0;
 
-		// формируем список подключений с разбивкой по channelID
-		$connections[$connection -> channelID][$connection -> userID][$connection -> id]              = $connection;
-		$ws_worker -> connections[$connection -> channelID][$connection -> userID][$connection -> id] = $connection;
-
 		$messageData = [
-			'action'    => 'Authorized',
+			'event'     => 'Authorized',
 			'userID'    => $connection -> userID,
 			'channelID' => $connection -> channelID,
 		];
 		$connection -> send(json_encode($messageData));
+
+		// формируем список подключений с разбивкой по channelID
+		$connections[$connection -> channelID][$connection -> userID][$connection -> id]              = $connection;
+		$ws_worker -> connections[$connection -> channelID][$connection -> userID][$connection -> id] = $connection;
 
 	};
 
@@ -155,7 +159,7 @@ $ws_worker -> onMessage = static function ($connection, $message) use (&$connect
 
 		$messageData = json_decode($message, true);
 		$toUserId    = isset($messageData['toID']) ? (int)$messageData['toID'] : 0;
-		$action      = $messageData['action'] ?? '';
+		$action      = $messageData['event'] ?? '';
 
 		// проверка соединения
 		if ($action === 'Pong') {

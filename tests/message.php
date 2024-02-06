@@ -19,8 +19,10 @@ require_once $rootpath.'/vendor/autoload.php';
 
 $message = [
 	"event"   => "message",
-	"payload" => "Это тестовое сообщение",
+	//"payload" => "Это тестовое сообщение",
 	//"payload" => "Ты это тоже видишь?",
+	//"payload" => "Бла бла бла",
+	"payload" => "1.. 2.. 3.. Start",
 ];
 
 $websocket = new WebSocket(25);

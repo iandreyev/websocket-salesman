@@ -30,28 +30,45 @@ $server = $config['protocol']."://".$config['host'].":".$config['wsport']."/serv
 </div>
 <script>
 	
-	let ws = new WebSocket('<?=$server?>');
-	
-	ws.onopen = function () {
-		console.log("Connected")
+	connect();
+
+	function connect(){
+
+		let ws = new WebSocket('<?=$server?>')
+
+		ws.onopen = function () {
+			console.log("Connected")
+		}
+
+		ws.onclose = function (event) {
+
+			if (event.wasClean) {
+				console.log('Соединение закрыто чисто')
+			}
+			else if (event.code === 1006) {
+				console.log('Соединение закрыто как 1006')
+			}
+			else {
+				console.log('Обрыв соединения')
+			}
+
+			/*
+			setTimeout(function() {
+				connect();
+			}, 1000);
+			*/
+
+		}
+
+		ws.onmessage = function (event) {
+			console.log(event.data)
+		}
+
+		ws.onerror = function (error) {
+			console.log("Ошибка: " + error.message)
+		}
+
 	}
-	ws.onclose = function (event) {
-		if (event.wasClean) {
-			console.log('Соединение закрыто чисто')
-		}
-		else if (event.code === 1006) {
-			console.log('Соединение закрыто как 1006')
-		}
-		else {
-			console.log('Обрыв соединения')
-		}
-	}
-	ws.onmessage = function (event) {
-		console.log(event.data)
-	};
-	ws.onerror = function (error) {
-		console.log("Ошибка: " + error.message)
-	};
 	
 	const func = () => {
 		//send on server
