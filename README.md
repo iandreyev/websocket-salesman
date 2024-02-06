@@ -21,6 +21,8 @@ cp init/wsserver.service /etc/systemd/system/
 systemctl enable --now wsserver
 ```
 
+и изменить в нем WorkingDirectory
+
 Дальнейшее управление службой производится следующими командами:
 ```shell
 systemctl status wsserver

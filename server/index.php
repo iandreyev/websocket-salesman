@@ -41,11 +41,12 @@ $httpurl  = $protocol."://".$config['host'].":".$config['httpport'];
 // Channel server.
 $channel_server = new Channel\Server();
 
-// Create a Websocket server
+// Websocket server
 $ws_worker          = new Worker("websocket://".$config['host'].":".$config['wsport'], $context);
 $ws_worker -> name  = 'pusher';
 $ws_worker -> count = 1;
 
+// Старт воркера
 $ws_worker -> onWorkerStart = static function ($ws_worker) use (&$connections) {
 
 	global $connections;
@@ -145,10 +146,8 @@ $ws_worker -> onConnect = static function ($connection) {
 
 };
 
+// Получение входящего сообщения
 $ws_worker -> onMessage = static function ($connection, $message) use (&$connections) {
-
-	// Publish broadcast event to all worker processes.
-	// Channel\Client ::publish('broadcast', $message);
 
 	// print $message."\n";
 
@@ -221,7 +220,7 @@ $ws_worker -> onMessage = static function ($connection, $message) use (&$connect
 
 };
 
-// Emitted when connection closed
+// Закрытие соединения
 $ws_worker -> onClose = static function (TcpConnection $connection) {
 
 	printf("%s:: Connection closed: userID %s, channelID: %s\n", WebSocket::current_datumtime(), $connection -> userID, $connection ->channelID);
@@ -232,7 +231,7 @@ $ws_worker -> onClose = static function (TcpConnection $connection) {
 
 };
 
-// Http server.
+// Http-сервер для получения сообщений и передачи в WS-сервер
 $http_worker                  = new Worker($httpurl);
 $http_worker -> name          = 'publisher';
 $http_worker -> onWorkerStart = static function () {

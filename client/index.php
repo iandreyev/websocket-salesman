@@ -25,6 +25,9 @@ $server = $config['protocol']."://".$config['host'].":".$config['wsport']."/serv
 	<title>Пример работы WebSocket</title>
 </head>
 <body>
+<div>
+
+</div>
 <script>
 	
 	let ws = new WebSocket('<?=$server?>');
