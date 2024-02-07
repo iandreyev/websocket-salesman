@@ -121,7 +121,7 @@ $ws_worker -> onWorkerStart = static function ($ws_worker) use (&$connections) {
 // Обработка нового подключения
 $ws_worker -> onConnect = static function ($connection) use ($ws_worker) {
 
-	printf("%s:: New connection - ID: %s, userID: %s, channelID: %s\n", WebSocket::current_datumtime(), $connection -> id, $connection -> userID, $connection -> channelID );
+	// printf("%s:: New connection - ID: %s, userID: %s, channelID: %s\n", WebSocket::current_datumtime(), $connection -> id, $connection -> userID, $connection -> channelID );
 
 	// Эта функция выполняется при подключении пользователя к WebSocket-серверу
 	$connection -> onWebSocketConnect = static function ($connection) use (&$connections) {
@@ -139,7 +139,7 @@ $ws_worker -> onConnect = static function ($connection) use ($ws_worker) {
 			'userID'    => $connection -> userID,
 			'channelID' => $connection -> channelID,
 		];
-		$connection -> send('Hello, you are authorized!');
+		//$connection -> send('Hello, you are authorized!');
 		$connection -> send(json_encode($messageData));
 
 		// счетчик безответных пингов
