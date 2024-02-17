@@ -241,6 +241,11 @@ $ws_worker -> onClose = static function (TcpConnection $connection) use (&$conne
 
 };
 
+$ws_worker -> onWorkerStop = static function () {
+	global $http_worker;
+	$http_worker -> stop();
+};
+
 // Http-сервер для получения сообщений и передачи в WS-сервер
 $http_worker                  = new Worker($httpurl);
 $http_worker -> name          = 'publisher';
