@@ -249,6 +249,7 @@ $ws_worker -> onWorkerStop = static function () {
 // Http-сервер для получения сообщений и передачи в WS-сервер
 $http_worker                  = new Worker($httpurl);
 $http_worker -> name          = 'publisher';
+$http_worker -> reusePort     = false;
 $http_worker -> onWorkerStart = static function () {
 	Channel\Client ::connect();
 };
