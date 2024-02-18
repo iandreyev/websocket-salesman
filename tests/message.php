@@ -21,8 +21,8 @@ $message = [
 	"event"   => "message",
 	//"payload" => "Это тестовое сообщение",
 	//"payload" => "Ты это тоже видишь?",
-	"payload" => "Бла бла бла",
-	//"payload" => "1.. 2.. 3.. Start",
+	//"payload" => "Бла бла бла",
+	"payload" => "1.. 2.. 3.. Start",
 ];
 
 $websocket = new WebSocket(25);
