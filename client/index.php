@@ -29,15 +29,19 @@ $server = $config['protocol']."://".$config['host'].":".$config['wsport']."/serv
 
 </div>
 <script>
+
+	let count = 0
+	let ws
 	
-	//connect();
+	connect();
 
-	//function connect(){
+	function connect(){
 
-		let ws = new WebSocket('<?=$server?>')
+		ws = new WebSocket('<?=$server?>')
 
 		ws.onopen = function () {
 			console.log("Connected")
+			ws.send('Hello Admin!')
 		}
 
 		ws.onclose = function (event) {
@@ -52,11 +56,18 @@ $server = $config['protocol']."://".$config['host'].":".$config['wsport']."/serv
 				console.log('Обрыв соединения')
 			}
 
-			/*
-			setTimeout(function() {
-				connect();
-			}, 1000);
-			*/
+			if(count < 4) {
+
+				setTimeout(function () {
+
+					connect();
+					count++;
+					console.log("ReConnecting: "+ count)
+
+				}, 1000);
+
+			}
+
 
 		}
 
@@ -68,13 +79,15 @@ $server = $config['protocol']."://".$config['host'].":".$config['wsport']."/serv
 			console.log("Ошибка: " + error.message)
 		}
 
-	//}
-	
+	}
+
+	/*
 	const func = () => {
 		//send on server
 		ws.send('Hello Admin!')
 	};
 	setTimeout(func, 2 * 1000)
+	*/
 
 </script>
 </body>
