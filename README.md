@@ -11,8 +11,8 @@
 
 - PHP 7.2+
 - Модули PHP
-  - posix
-  - socket
+    - posix
+    - socket
 
 
 ## Стартовый скрипт
