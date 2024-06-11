@@ -1,63 +1,113 @@
 <?php
+/* ============================ */
+/*         SalesMan CRM         */
+/* ============================ */
+/* (C) 2024 Vladislav Andreev   */
+/*       SalesMan Project       */
+/*        www.isaler.ru         */
+/* ============================ */
+
 error_reporting(E_ERROR);
 
+use Salesman\WebSocket;
+use Workerman\Connection\TcpConnection;
 use Workerman\Lib\Timer;
 use Workerman\Worker;
 
-require_once __DIR__.'/vendor/autoload.php';
+$rootpath = __DIR__;
+
+require_once $rootpath.'/vendor/autoload.php';
+
+// загружаем конфиг
+$websocket = new WebSocket();
+$config    = $websocket -> settings;
 
 // сюда будем складывать все подключения
 $connections = [];
 
-// SSL context.
-$context = [
-	'ssl' => [
-		'local_cert'  => '/your/path/of/server.pem',
-		'local_pk'    => '/your/path/of/server.key',
-		'verify_peer' => false,
-	]
-];
+// SSL context, если настроен
+$context = [];
 
-// Create a Websocket server
-$worker = new Worker('websocket://127.0.0.1:8090');
+if (!empty($config['context'])) {
+	//$context = $config['context'];
+}
 
-// 4 processes
-$worker -> count = 4;
+// адрес http сервера
+//$protocol = $config['protocol'] === 'wss' ? 'https' : 'http';
+$protocol = "tcp";
+$httpurl  = $protocol."://".$config['host'].":".$config['httpport'];
 
-$worker -> onWorkerStart = static function ($worker) use (&$connections) {
+// Channel server.
+$channel_server = new Channel\Server();
+
+// Websocket server
+$ws_worker          = new Worker("websocket://".$config['host'].":".$config['wsport'], $context);
+$ws_worker -> name  = 'pusher';
+$ws_worker -> count = 1;
+
+// Старт воркера
+$ws_worker -> onWorkerStart = static function ($ws_worker) use (&$connections) {
+
+	// Channel client.
+	Channel\Client ::connect();
+
+	$event_name = 'message';
+
+	Channel\Client ::on($event_name, static function ($event_data) use ($ws_worker, &$connections) {
+
+		//global $tcpconnection;
+
+		$userID    = $event_data['userID'];
+		$channelID = $event_data['channelID'];
+		$message   = is_array($event_data['payload']) ? json_encode($event_data['payload']) : $event_data['payload'];
+
+		//print_r($connections);
+		//print_r($ws_worker -> connections[$channelID][$userID]);
+
+		if (!isset($ws_worker -> connections[$channelID][$userID])) {
+			printf("%s:: Connection not exists - userID: %s, channelID: %s\n", WebSocket::current_datumtime(), $userID, $channelID);
+			return;
+		}
+
+		foreach ($ws_worker -> connections[$channelID][$userID] as $c) {
+			$to_connection = $ws_worker -> connections[$channelID][$userID][$c -> id];
+			$to_connection -> send($message);
+			printf("%s:: Message to ID: %s, userID: %s, channelID: %s sended message: %s\n", WebSocket::current_datumtime(), $c -> id, $userID, $channelID, $message);
+		}
+
+		// printf("%s:: Mesage to userID: %s, channelID: %s sended message: %s\n", WebSocket::current_datumtime(), $userID, $channelID, $message);
+
+	});
 
 	// пингуем каждые 5 секунд
 	$interval = 5;
 
 	Timer ::add($interval, static function () use (&$connections) {
 
-		foreach ($connections as $c) {
+		foreach ($connections as $channelID) {
 
-			// Если ответ не пришел 3 раза, то удаляем соединение из списка
-			// и оповещаем всех участников об "отвалившемся" пользователе
-			if ($c -> pingWithoutResponseCount >= 3) {
+			// отправляем пинг
+			foreach ($channelID as $userID => $c) {
 
-				unset($connections[$c -> id]);
+				// Если ответ не пришел 3 раза, то удаляем соединение из списка
+				if ($c -> pingWithoutResponseCount >= 3) {
 
-				$messageData = [
-					'action'    => 'ConnectionLost',
-					'userId'    => $c -> id,
-					'userName'  => $c -> userName,
-					'gender'    => $c -> gender,
-					'userColor' => $c -> userColor
-				];
-				$message     = json_encode($messageData);
+					printf("%s:: Channel: %s, UserID: %s - Unregistered\n", WebSocket::current_datumtime(), $channelID, $c -> userID);
 
-				// уничтожаем соединение
-				$c -> destroy();
-				$c -> send($message);
+					//unset($connections[$channelID][$userID][$c -> id]);
 
-			}
-			else {
+					// уничтожаем соединение
+					$c -> destroy();
 
-				$c -> send('{"action":"Ping"}');
-				// увеличиваем счетчик пингов
-				$c -> pingWithoutResponseCount++;
+				}
+				else {
+
+					$c -> send(json_encode(["event" => "Ping"]));
+
+					// увеличиваем счетчик пингов
+					$c -> pingWithoutResponseCount++;
+
+				}
 
 			}
 
@@ -67,216 +117,158 @@ $worker -> onWorkerStart = static function ($worker) use (&$connections) {
 
 };
 
-// Emitted when new connection come
-$worker -> onConnect = static function ($connection) {
+// Обработка нового подключения
+$ws_worker -> onConnect = static function ($connection) use ($ws_worker) {
 
-	$connection -> send('This message was sent from Backend(index.php), when server was started.');
-	echo "New connection\n";
-	echo json_encode($connection)."\n";
+	// printf("%s:: New connection - ID: %s, userID: %s, channelID: %s\n", WebSocket::current_datumtime(), $connection -> id, $connection -> userID, $connection -> channelID );
 
 	// Эта функция выполняется при подключении пользователя к WebSocket-серверу
 	$connection -> onWebSocketConnect = static function ($connection) use (&$connections) {
 
-		echo "New WebSocket connection\n";
-		echo json_encode($connection)."\n";
-		echo json_encode($_GET)."\n";
+		global $ws_worker;
 
-		$gender    = 0;
-		$userColor = "#000000";
-
-		// Достаём имя пользователя, если оно было указано
-		if (isset($_GET['userName'])) {
-			$originalUserName = preg_replace('/[^a-zA-Zа-яА-ЯёЁ0-9\-\_ ]/u', '', trim($_GET['userName']));
-		}
-		else {
-			$originalUserName = 'Инкогнито';
-		}
-
-		// Половая принадлежность, если указана
-		// 0 - Неизвестный пол
-		// 1 - М
-		// 2 - Ж
-		if (isset($_GET['gender'])) {
-			$gender = (int)$_GET['gender'];
-		}
-
-		if (
-			!in_array($gender, [
-				0,
-				1,
-				2
-			])
-		) {
-			$gender = 0;
-		}
-
-		// Цвет пользователя
-		if (isset($_GET['userColor'])) {
-			$userColor = $_GET['userColor'];
-		}
-
-		// Проверяем уникальность имени в чате
-		$userName = $originalUserName;
-
-		$num = 2;
-		do {
-
-			$duplicate = false;
-
-			foreach ((array)$connections as $c) {
-
-				if ($c -> userName === $userName) {
-					$userName = "$originalUserName ($num)";
-					$num++;
-					$duplicate = true;
-					break;
-				}
-
-			}
-
-		}
-		while ($duplicate);
+		// $connection -> send('Hello, you are connected!');
 
 		// Добавляем соединение в список
-		$connection -> userName  = $userName;
-		$connection -> gender    = $gender;
-		$connection -> userColor = $userColor;
+		$connection -> userID    = $_GET['userID'];
+		$connection -> channelID = $_GET['channelID'];
 
-		// счетчик безответных пингов
-		$connection -> pingWithoutResponseCount = 0;
-
-		$connections[$connection -> id] = $connection;
-
-		// Собираем список всех пользователей
-		$users = [];
-		foreach ($connections as $c) {
-			$users[] = [
-				'userId'    => $c -> id,
-				'userName'  => $c -> userName,
-				'gender'    => $c -> gender,
-				'userColor' => $c -> userColor
-			];
-		}
-
-		// Отправляем пользователю данные авторизации
 		$messageData = [
-			'action'    => 'Authorized',
-			'userId'    => $connection -> id,
-			'userName'  => $connection -> userName,
-			'gender'    => $connection -> gender,
-			'userColor' => $connection -> userColor,
-			'users'     => $users
+			'event'     => 'Authorized',
+			'userID'    => $connection -> userID,
+			'channelID' => $connection -> channelID,
 		];
+		//$connection -> send('Hello, you are authorized!');
 		$connection -> send(json_encode($messageData));
 
-		// Оповещаем всех пользователей о новом участнике в чате
-		$messageData = [
-			'action'    => 'Connected',
-			'userId'    => $connection -> id,
-			'userName'  => $connection -> userName,
-			'gender'    => $connection -> gender,
-			'userColor' => $connection -> userColor
-		];
-		$message     = json_encode($messageData);
+		// счетчик безответных пингов
+		// $connection -> pingWithoutResponseCount = 0;
 
-		foreach ($connections as $c) {
-			$c -> send($message);
-		}
+		printf("%s:: New WebSocket connection - ID: %s, userID: %s, channelID: %s\n", WebSocket::current_datumtime(), $connection -> id, $connection -> userID, $connection -> channelID );
+
+		// формируем список подключений с разбивкой по channelID
+		$connections[$connection -> channelID][$connection -> userID][$connection -> id]              = $connection;
+		$ws_worker -> connections[$connection -> channelID][$connection -> userID][$connection -> id] = $connection;
 
 	};
 
 };
 
-$worker -> onMessage = static function ($connection, $message) use (&$connections) {
+// Получение входящего сообщения
+$ws_worker -> onMessage = static function ($connection, $message) use (&$connections) {
 
-	$messageData = json_decode($message, true);
-	$toUserId    = isset($messageData['toUserId']) ? (int)$messageData['toUserId'] : 0;
-	$action      = $messageData['action'] ?? '';
+	// print $message."\n";
 
-	// проверка соединения
-	if ($action === 'Pong') {
+	if (!empty($message)) {
+
+		$messageData = json_decode($message, true);
+		$toUserId    = isset($messageData['toID']) ? (int)$messageData['toID'] : 0;
+		$action      = $messageData['event'] ?? '';
+
+		// проверка соединения
+		if ($action === 'Pong') {
+
+			// При получении сообщения "Pong", обнуляем счетчик пингов
+			$connection -> pingWithoutResponseCount = 0;
+
+		}
+		// обычные сообщения
+		else {
+
+			printf("%s:: Channel: %s, UserID: %s, Message: %s\n", WebSocket::current_datumtime(), $connection -> channelID, $connection -> userID, $message);
+			//echo "Message: $message\n";
+
+			// Дополняем сообщение данными об отправителе
+			$messageData['userID']    = $connection -> userID;
+			$messageData['channelID'] = $connection -> channelID;
+
+			if( !empty($messageData['payload']) ){
+				$messageData['message'] = is_array($messageData['payload']) ? json_encode($messageData['payload']) : $messageData['payload'];
+			}
+
+			if (!empty($messageData['message'])) {
+
+				// общая отправка в канал
+				if ($toUserId === 0) {
+
+					foreach ($connections[$connection -> channelID] as $c) {
+						$c -> send(json_encode($messageData));
+					}
+
+				}
+				// Отправляем приватное сообщение указанному пользователю во все его соединения
+				elseif (isset($connections[$connection -> channelID][$toUserId])) {
+
+					foreach ($connections[$connection -> channelID][$toUserId] as $c) {
+						$c -> send(json_encode($messageData));
+					}
+
+				}
+				// если не существует, то отправляем ошибку отправителю
+				else {
+
+					// и отправителю
+					$messageData['error']   = true;
+					$messageData['message'] = 'Не найден получатель. Возможно он оффлайн.';
+					$connection -> send(json_encode($messageData));
+
+				}
+
+			}
+
+		}
+
+	}
+	else {
 
 		// При получении сообщения "Pong", обнуляем счетчик пингов
 		$connection -> pingWithoutResponseCount = 0;
 
 	}
-	// обычные сообщения
-	else {
-
-		// Дополняем сообщение данными об отправителе
-		$messageData['userId']    = $connection -> id;
-		$messageData['userName']  = $connection -> userName;
-		$messageData['gender']    = $connection -> gender;
-		$messageData['userColor'] = $connection -> userColor;
-
-		if( isset($messageData['text']) ) {
-
-			// Преобразуем специальные символы в HTML-сущности в тексте сообщения
-			$messageData['text'] = htmlspecialchars($messageData['text']);
-			// Заменяем текст заключенный в фигурные скобки на жирный
-			$messageData['text'] = preg_replace('/\{(.*)\}/u', '<b>\\1</b>', $messageData['text']);
-
-		}
-
-		if ($toUserId === 0) {
-
-			// Отправляем сообщение всем пользователям
-			$messageData['action'] = 'PublicMessage';
-
-			foreach ($connections as $c) {
-				$c -> send(json_encode($messageData));
-			}
-
-		}
-		else {
-
-			$messageData['action'] = 'PrivateMessage';
-
-			if (isset($connections[$toUserId])) {
-
-				// Отправляем приватное сообщение указанному пользователю
-				$connections[$toUserId] -> send(json_encode($messageData));
-
-			}
-			else {
-				$messageData['text'] = 'Не удалось отправить сообщение выбранному пользователю';
-			}
-
-			// и отправителю
-			$connection -> send(json_encode($messageData));
-
-		}
-
-	}
 
 };
 
-// Emitted when connection closed
-$worker -> onClose = static function ($connection) {
+// Закрытие соединения
+//$ws_worker -> onClose = static function () use ($ws_worker) {
+$ws_worker -> onClose = static function (TcpConnection $connection) use (&$connections, $ws_worker) {
 
-	echo "Connection closed\n";
-	echo json_encode($connection)."\n";
-
-	// Эта функция выполняется при закрытии соединения
-	if (!isset($connections[$connection -> id])) {
-		return;
-	}
+	printf("%s:: Connection closed: ID: %s, userID %s, channelID: %s\n", WebSocket::current_datumtime(), $connection -> id, $connection -> userID, $connection -> channelID);
+	//print_r($connection);
 
 	// Удаляем соединение из списка
-	unset($connections[$connection -> id]);
+	unset($connections[$connection -> channelID][$connection -> userID][$connection -> id], $ws_worker -> connections[$connection -> channelID][$connection -> userID][$connection -> id]);
 
-	// Оповещаем всех пользователей о выходе участника из чата
-	$messageData = [
-		'action'    => 'Disconnected',
-		'userId'    => $connection -> id,
-		'userName'  => $connection -> userName,
-		'gender'    => $connection -> gender,
-		'userColor' => $connection -> userColor
-	];
-	$message     = json_encode($messageData);
+};
 
-	foreach ($connections as $c) {
-		$c -> send($message);
+$ws_worker -> onWorkerStop = static function () {
+	global $http_worker;
+	$http_worker -> stop();
+};
+
+// Http-сервер для получения сообщений и передачи в WS-сервер
+$http_worker                  = new Worker($httpurl);
+$http_worker -> name          = 'publisher';
+$http_worker -> reusePort     = false;
+$http_worker -> onWorkerStart = static function () {
+	Channel\Client ::connect();
+};
+$http_worker -> onMessage     = static function ($tcpconnection, $data) {
+
+	$tcpconnection -> send('ok');
+	//$tcpconnection -> send($tcpconnection -> id);
+
+	// print $data."\n";
+
+	$data = json_decode($data, true);
+
+	if (!empty($data['userID']) && !empty($data['chatID'])) {
+
+		Channel\Client ::publish('message', [
+			'userID'    => $data['userID'],
+			'channelID' => $data['chatID'],
+			'payload'   => $data['payload']
+		]);
+
 	}
 
 };

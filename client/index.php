@@ -16,7 +16,7 @@ require_once $rootpath.'/vendor/autoload.php';
 $websocket = new WebSocket(25);
 $config    = $websocket -> settings;
 
-$server = $config['protocol']."://".$config['host'].":".$config['wsport']."/server/?userID=".$config['userID']."&channelID=".$config['chatID'];
+$server = $config['protocol']."://".$config['host'].":".$config['wsport']."/?userID=".$config['userID']."&channelID=".$config['chatID'];
 ?>
 <!DOCTYPE html>
 <html lang="ru">
@@ -58,13 +58,13 @@ $server = $config['protocol']."://".$config['host'].":".$config['wsport']."/serv
 
 			if(count < 4) {
 
-				setTimeout(function () {
+				/*setTimeout(function () {
 
 					connect();
 					count++;
 					console.log("ReConnecting: "+ count)
 
-				}, 1000);
+				}, 1000);*/
 
 			}
 
