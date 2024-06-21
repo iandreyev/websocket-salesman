@@ -53,7 +53,7 @@ $ws_worker -> onWorkerStart = static function ($ws_worker) use (&$connections) {
 
 	$event_name = 'message';
 
-	Channel\Client ::on($event_name, static function ($event_data) use ($ws_worker, &$connections) {
+	Channel\Client ::on($event_name, static function ($event_data) use ($ws_worker) {
 
 		//global $tcpconnection;
 
@@ -82,9 +82,10 @@ $ws_worker -> onWorkerStart = static function ($ws_worker) use (&$connections) {
 	// пингуем каждые 5 секунд
 	$interval = 5;
 
-	Timer ::add($interval, static function ()/* use (&$connections)*/ {
+	// todo: этот код не работает - $connections пустой
+	$timerID = Timer ::add($interval, static function () use (&$connections) {
 
-		global $connections;
+		//global $connections;
 
 		//print json_encode($connections)."\n";
 
@@ -237,7 +238,6 @@ $ws_worker -> onMessage = static function ($connection, $message) use (&$connect
 };
 
 // Закрытие соединения
-//$ws_worker -> onClose = static function () use ($ws_worker) {
 $ws_worker -> onClose = static function (TcpConnection $connection) use (&$connections, $ws_worker) {
 
 	printf("%s:: Connection closed: ID: %s, userID %s, channelID: %s\n", WebSocket::current_datumtime(), $connection -> id, $connection -> userID, $connection -> channelID);
