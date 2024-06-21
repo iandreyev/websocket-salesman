@@ -82,12 +82,18 @@ $ws_worker -> onWorkerStart = static function ($ws_worker) use (&$connections) {
 	// пингуем каждые 5 секунд
 	$interval = 5;
 
-	Timer ::add($interval, static function () use (&$connections) {
+	Timer ::add($interval, static function ()/* use (&$connections)*/ {
+
+		global $connections;
+
+		//print json_encode($connections)."\n";
 
 		foreach ($connections as $channelID) {
 
 			// отправляем пинг
 			foreach ($channelID as $userID => $c) {
+
+				printf("%s:: TIMER - Channel: %s, UserID: %s\n", WebSocket::current_datumtime(), $channelID, $c -> userID);
 
 				// Если ответ не пришел 3 раза, то удаляем соединение из списка
 				if ($c -> pingWithoutResponseCount >= 3) {
@@ -97,12 +103,14 @@ $ws_worker -> onWorkerStart = static function ($ws_worker) use (&$connections) {
 					//unset($connections[$channelID][$userID][$c -> id]);
 
 					// уничтожаем соединение
-					$c -> destroy();
+					//$c -> destroy();
 
 				}
 				else {
 
-					$c -> send(json_encode(["event" => "Ping"]));
+					$x = $c -> send(json_encode(["event" => "Ping"]));
+
+					printf("%s:: Channel: %s, UserID: %s, Data: %s\n", WebSocket::current_datumtime(), $channelID, $c -> userID, json_encode($x));
 
 					// увеличиваем счетчик пингов
 					$c -> pingWithoutResponseCount++;

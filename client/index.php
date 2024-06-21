@@ -42,6 +42,7 @@ $server = $config['protocol']."://".$config['host'].":".$config['wsport']."/?use
 		ws.onopen = function () {
 			console.log("Connected")
 			ws.send('Hello Admin!')
+			count = 0
 		}
 
 		ws.onclose = function (event) {
@@ -58,13 +59,13 @@ $server = $config['protocol']."://".$config['host'].":".$config['wsport']."/?use
 
 			if(count < 4) {
 
-				/*setTimeout(function () {
+				setTimeout(function () {
 
 					connect();
 					count++;
 					console.log("ReConnecting: "+ count)
 
-				}, 1000);*/
+				}, 1000);
 
 			}
 
@@ -73,6 +74,9 @@ $server = $config['protocol']."://".$config['host'].":".$config['wsport']."/?use
 
 		ws.onmessage = function (event) {
 			console.log(event.data)
+			if(event.data.event === 'ping'){
+				ws.send('pong')
+			}
 		}
 
 		ws.onerror = function (error) {
