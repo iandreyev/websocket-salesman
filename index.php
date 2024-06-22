@@ -248,8 +248,8 @@ $ws_worker -> onClose = static function (TcpConnection $connection) use (&$conne
 
 };
 
-$ws_worker -> onWorkerStop = static function () {
-	global $http_worker;
+$ws_worker -> onWorkerStop = static function () use (&$http_worker) {
+	//global $http_worker;
 	$http_worker -> stop();
 };
 
