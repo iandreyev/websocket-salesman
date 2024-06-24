@@ -1,6 +1,10 @@
 # О разработке
 За основу взят пример [SimpleAsemblyWebsoket](https://gitlab.com/DmitriyProgrammer/simpleasemblywebsoket), основанный на [Workerman](https://github.com/walkor/workerman).
 
+Дополнительные материалы:
+- Статья на [Хабре](https://habr.com/ru/articles/331462/)
+- Примеры того же автора для [Workerman](https://github.com/morozovsk/workerman-examples)
+
 ## Задача
 - Разработать инструмент для поднятия websocket-сервера и работы с ним
 
