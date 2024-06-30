@@ -34,7 +34,7 @@ cp init/wsserver.service /etc/systemd/system/
 systemctl enable --now wsserver
 ```
 
-и изменить в нем 
+И изменить в нем 
 - WorkingDirectory на свою (использована **/srv/ws**)
 - указать исполняемый php в параметре ExecStart (использован **/opt/php81/bin/php**) - рекомендуется указать абсолютный путь
 
