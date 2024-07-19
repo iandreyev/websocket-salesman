@@ -20,9 +20,10 @@
 
 ### Настройка Firewall
 
-- iptables -I INPUT 10 -p tcp --dport 8089 -j ACCEPT
-- iptables -I INPUT 10 -p tcp --dport 8099 -j ACCEPT
-
+```shell
+iptables -I INPUT 10 -p tcp --dport 8089 -j ACCEPT
+iptables -I INPUT 10 -p tcp --dport 8099 -j ACCEPT
+```
 
 ## Стартовый скрипт
 
