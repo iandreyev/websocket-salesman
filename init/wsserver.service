@@ -3,12 +3,16 @@ Description=WebSocket service
 After=network.target
 
 [Service]
-Type=simple
-User=nobody
-Group=nobody
+Type=forking
+#PIDFile=/home/vladislav/ws-service.pid
+User=root
+Group=root
 WorkingDirectory=/srv/ws
-ExecStart=/opt/php81/bin/php index.php start -d
+ExecStart=/usr/bin/php /srv/ws/index.php start -d
+ExecStop=/usr/bin/php /srv/ws/index.php stop
+ExecReload=/usr/bin/php /srv/ws/index.php restart -d
 Restart=always
+RestartSec=10
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 
 [Install]

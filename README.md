@@ -43,12 +43,11 @@ sudo /sbin/service iptables save
 ```shell
 cd /srv/ws
 cp init/wsserver.service /etc/systemd/system/
-systemctl enable --now wsserver
 ```
 
-И изменить в нем 
+И изменить в нем:
 - WorkingDirectory на свою (использована **/srv/ws**)
-- указать исполняемый php в параметре ExecStart (использован **/opt/php81/bin/php**) - рекомендуется указать абсолютный путь
+- указать исполняемый php и абсолютные пути до скрипта в параметрах ExecStart, ExecStop, ExecReload (использован **/usr/bin/php**) - рекомендуется указать абсолютный путь
 
 ```shell
 # путь установки php
@@ -60,6 +59,7 @@ locate -b '\php'
 Перезапустить службу
 
 ```shell
+systemctl enable --now wsserver
 systemctl daemon-reload
 ```
 
