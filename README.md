@@ -25,6 +25,17 @@ iptables -I INPUT 10 -p tcp --dport 8089 -j ACCEPT
 iptables -I INPUT 10 -p tcp --dport 8099 -j ACCEPT
 ```
 
+Все настройки iptables, которые вы указали с помощью этих команд сохранятся только до перезагрузки.
+- В Ubuntu выполните:
+```shell
+sudo /sbin/iptables-save
+```
+- А в RedHat или CentOS:
+```shell
+sudo /sbin/service iptables save
+```
+
+
 ## Стартовый скрипт
 
 Прилагаемый в комплекте файл `init/wsserver.service` необходимо скопировать в каталог `/etc/systemd/system`
@@ -39,10 +50,17 @@ systemctl enable --now wsserver
 - WorkingDirectory на свою (использована **/srv/ws**)
 - указать исполняемый php в параметре ExecStart (использован **/opt/php81/bin/php**) - рекомендуется указать абсолютный путь
 
+```shell
+# путь установки php
+which php
+# или
+locate -b '\php'
+```
+
 Перезапустить службу
 
 ```shell
-systemctl daemon-reload 
+systemctl daemon-reload
 ```
 
 Дальнейшее управление службой производится следующими командами:
