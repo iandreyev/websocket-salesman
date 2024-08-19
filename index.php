@@ -59,6 +59,15 @@ $ws_worker -> onWorkerStart = static function ($ws_worker) use (&$connections) {
 
 		$userID    = $event_data['userID'];
 		$channelID = $event_data['channelID'];
+
+		// Дополняем сообщение данными об отправителе
+		if(is_array($event_data['payload'])) {
+
+			$event_data['payload']['userID'] = $userID;
+			$event_data['payload']['chatID'] = $channelID;
+
+		}
+
 		$message   = is_array($event_data['payload']) ? json_encode($event_data['payload']) : $event_data['payload'];
 
 		//print_r($connections);

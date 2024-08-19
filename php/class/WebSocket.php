@@ -53,7 +53,8 @@ class WebSocket {
 		// обычно не нужны
 		if ($this -> iduser > 0) {
 
-			$set['userID']  = $this -> userUID($this -> iduser);
+			//$set['userID']  = $this -> userUID($this -> iduser);
+			$set['userID']  = $this -> iduser;
 			$set['chatID']  = $config['chat']['chatID'];
 			$set['userKEY'] = md5($this -> iduser.$this -> userChat);
 
@@ -96,9 +97,8 @@ class WebSocket {
 
 		if (!$socket) {
 			return [
-				"error"  => $errstr,
-				"url"    => $url,
-				"params" => $params
+				"result" => "error",
+				"error"  => $errstr
 			];
 		}
 
@@ -108,9 +108,7 @@ class WebSocket {
 		fclose($socket);
 
 		return [
-			"result" => $result,
-			"url"    => $url,
-			"params" => $params
+			"result" => $result
 		];
 
 	}

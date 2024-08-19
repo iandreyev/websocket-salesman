@@ -17,15 +17,16 @@ $rootpath = dirname(__DIR__);
 
 require_once $rootpath.'/vendor/autoload.php';
 
-$message = [
+$user = 25;
+
+$message = json_decode(file_get_contents('php://input'), true)['message'];
+
+$websocket = new WebSocket($user);
+$res       = $websocket -> sendMessage($user, $websocket -> settings['chatID'], [
 	"event"   => "message",
-	//"payload" => "Это тестовое сообщение",
-	"payload" => "Ты это тоже видишь?",
-	//"payload" => "Бла бла бла",
-	//"payload" => "1.. 2.. 3.. Start",
-];
+	"payload" => $message,
+	//"UserID"  => $websocket -> settings['userID'],
+	//"ChannelID" => $websocket -> settings['chatID'],
+]);
 
-$websocket = new WebSocket(25);
-$res       = $websocket -> sendMessage(25, $websocket -> settings['chatID'], $message);
-
-print_r($res);
+print json_encode(["result" => $res['result'], "error" => $res['error']]);

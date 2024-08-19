@@ -1,0 +1,190 @@
+<!--
+/* ============================ */
+/*         SalesMan CRM         */
+/* ============================ */
+/* (C) 2024 Vladislav Andreev   */
+/*       SalesMan Project       */
+/*        www.isaler.ru         */
+/* ============================ */
+-->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title>Пример работы WebSocket</title>
+	<link type="text/css" rel="stylesheet" href="assets/css/base.css">
+	<!--<script defer src="https://unpkg.com/alpinejs-textarea-grow@1.x.x/dist/grow.min.js"></script>-->
+	<script defer src="assets/js/alpinejs.3.x.min.js"></script>
+	<style>
+		[x-cloak] {
+			display: none;
+		}
+		.container{
+			width: 600px;
+			margin: 0 auto;
+		}
+		.message{
+			border: 2px dotted var(--blue);
+			background: var(--biruza-lite);
+			padding: 10px;
+			margin-bottom: 5px;
+			border-radius: 5px;
+		}
+	</style>
+</head>
+<body>
+<div class="container" x-data="ws">
+	
+	<div class="Bold fs-14 mb20">Сообщения</div>
+	
+	<div x-cloak class="gray fs-09" x-show="$store.main.messages.length === 0">Ожидаю сообщения...</div>
+	<div x-cloak class="gray fs-09" x-show="$store.main.closed">Соединение закрыто</div>
+	<div x-cloak class="gray fs-09" x-show="$store.main.connected">Соединение установлено</div>
+
+	<template x-show="$store.main.messages.length > 0" x-for="message in $store.main.messages">
+	
+		<div x-show="message.payload !== ''">
+			
+			<div class="message" x-html="message.payload"></div>
+			
+		</div>
+		
+	</template>
+	
+	<div class="space-20"></div>
+	<hr class="soft-line">
+	
+	<div>
+		<textarea x-model="message" x-grow class="wp100 mb20" rows="10"></textarea>
+		<a type="button" class="button greenbtn" @click="sendMessage()">Отправить</a>
+	</div>
+	
+</div>
+<script>
+
+	let count = 0
+	let ws
+	let url = ''
+	
+	document.addEventListener('alpine:init', () => {
+		Alpine.data('ws', () => ({
+			message: "",
+			sendMessage: function () {
+				
+				fetch('../php/send.php', {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						"Accept": "application/json"
+					},
+					body: JSON.stringify({message: this.message, userID: Alpine.store('main').user.userID, channelID: Alpine.store('main').user.channelID}),
+				})
+						.then(response => response.json())
+						.then(response => {
+							this.message = ''
+							console.log(response)
+						})
+						.catch(() => {
+						
+						})
+				
+			},
+		}))
+		Alpine.store('main', {
+			messages: [],
+			closed: false,
+			connected: false,
+			closeStatus: "",
+			user: {
+				userID: "",
+				channelID: "",
+			}
+		})
+	})
+
+	fetch('../php/getconfig.php')
+		.then(response => response.json())
+		.then(data => {
+			url = data.url
+			Alpine.store('main').user.userID = data.userID
+			Alpine.store('main').user.channelID = data.channelID
+			connect();
+		})
+
+	function connect(){
+		
+		console.log(Alpine.store('main'))
+
+		ws = new WebSocket(url)
+
+		ws.onopen = function () {
+			
+			Alpine.store.connected = true
+			Alpine.store.closed = false
+			Alpine.store.closeStatus = ''
+			
+			ws.send('Hello!')
+			count = 0
+			
+		}
+
+		ws.onclose = function (event) {
+
+			if (event.wasClean) {
+				Alpine.store.connected = false
+				Alpine.store.closed = true
+				Alpine.store.closeStatus = 'Соединение закрыто чисто'
+			}
+			else if (event.code === 1006) {
+				Alpine.store.connected = false
+				Alpine.store.closed = true
+				Alpine.store.closeStatus = 'Соединение закрыто как 1006'
+			}
+			else {
+				Alpine.store.connected = false
+				Alpine.store.closed = true
+				Alpine.store.closeStatus = 'Обрыв соединения'
+			}
+
+			if(count < 4) {
+
+				setTimeout(function () {
+
+					connect();
+					count++;
+					console.log("ReConnecting: "+ count)
+
+				}, 1000);
+
+			}
+
+
+		}
+
+		ws.onmessage = function (event) {
+			
+			let data = JSON.parse(event.data)
+			
+			if(data.event === 'message') {
+				data.payload = data.payload.replace(/\n/g, "<br />");
+				Alpine.store('main').messages.push(data)
+			}
+			
+			//console.log(Alpine.store('main').messages)
+			//console.log(event.data)
+			
+			if(event.data.event === 'ping'){
+				ws.send('pong')
+			}
+			
+		}
+
+		ws.onerror = function (error) {
+			console.log("Ошибка: " + error.message)
+		}
+
+	}
+
+</script>
+</body>
+</html>
